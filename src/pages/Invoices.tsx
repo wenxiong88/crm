@@ -19,6 +19,8 @@ export default function Invoices() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [currentInvoice, setCurrentInvoice] = useState<Partial<Invoice>>({ items: [] });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -134,6 +136,24 @@ export default function Invoices() {
 
     return matchesSearch && matchesStatus;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedInvoices = filteredInvoices.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (safePage > 3) pages.push('...');
+      for (let i = Math.max(2, safePage - 1); i <= Math.min(totalPages - 1, safePage + 1); i++) pages.push(i);
+      if (safePage < totalPages - 2) pages.push('...');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -327,45 +347,47 @@ export default function Invoices() {
   );
 
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('invoices')}</h1>
-          <p className="mt-1 text-sm text-gray-500">{t('manageInvoices')}</p>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder={t('search')}
-              className="pl-9 pr-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-900/50 text-sm text-gray-900 dark:text-white input-themed w-full sm:w-64"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+    <div className="space-y-3">
+      {/* Page Header - Sticky */}
+      <div className="sticky -top-4 z-10 -mx-6 px-6 pt-4 pb-3 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t('invoices')}</h1>
+            <p className="text-sm text-gray-500">{t('manageInvoices')}</p>
           </div>
 
-          <select
-            className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-900/50 text-sm text-gray-900 dark:text-white input-themed"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">{t('allStatus')}</option>
-            <option value="draft">{t('draft')}</option>
-            <option value="sent">{t('sent')}</option>
-            <option value="paid">{t('paid')}</option>
-            <option value="overdue">{t('overdue')}</option>
-          </select>
+          <div className="mt-4 md:mt-0 flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder={t('search')}
+                className="pl-10 pr-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-900/50 text-sm input-themed text-gray-900 dark:text-white w-full sm:w-64"
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              />
+              <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            </div>
 
-          <button
-            className="btn-gradient px-4 py-2 rounded-xl text-sm font-medium text-white flex items-center justify-center gap-2"
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            <i className="fa-solid fa-plus text-xs"></i>
-            {t('add')}
-          </button>
+            <select
+              className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-900/50 text-sm text-gray-900 dark:text-white input-themed"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">{t('allStatus')}</option>
+              <option value="draft">{t('draft')}</option>
+              <option value="sent">{t('sent')}</option>
+              <option value="paid">{t('paid')}</option>
+              <option value="overdue">{t('overdue')}</option>
+            </select>
+
+            <button
+              className="btn-gradient rounded-xl text-sm font-medium text-white px-4 py-2 flex items-center justify-center"
+              onClick={() => setIsAddModalOpen(true)}
+            >
+              <i className="fa-solid fa-plus mr-2"></i>
+              {t('add')}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -421,7 +443,7 @@ export default function Invoices() {
                   </td>
                 </tr>
               ) : (
-                filteredInvoices.map((invoice, index) => {
+                paginatedInvoices.map((invoice, index) => {
                   const badge = getStatusBadge(invoice.status);
                   return (
                     <motion.tr
@@ -431,55 +453,52 @@ export default function Invoices() {
                       transition={{ delay: index * 0.05 }}
                       className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors"
                     >
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-2.5 whitespace-nowrap">
                         <span className="text-sm font-medium text-gray-900 dark:text-white">{invoice.id}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-2.5 whitespace-nowrap">
                         <span className="text-sm text-gray-600 dark:text-gray-400">{invoice.customerName}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-2.5 whitespace-nowrap">
                         <span className="text-sm text-gray-500 dark:text-gray-400">{invoice.date}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-2.5 whitespace-nowrap">
                         <span className="text-sm text-gray-500 dark:text-gray-400">{invoice.dueDate}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-2.5 whitespace-nowrap">
                         <span className="text-sm font-semibold text-gray-900 dark:text-white">¥{(invoice.totalAmount).toLocaleString()}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-2.5 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
                           <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: badge.dot }}></span>
                           {getStatusText(invoice.status)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <td className="px-4 py-2.5 whitespace-nowrap text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <button
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:bg-emerald-900/20 transition-colors"
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
                             onClick={() => {
                               setCurrentInvoice(invoice);
                               setIsDetailModalOpen(true);
                             }}
-                            title={t('details')}
                           >
-                            <i className="fa-solid fa-eye text-xs"></i>
+                            <i className="fa-solid fa-eye text-sm"></i>
                           </button>
                           <button
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 transition-colors"
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                             onClick={() => {
                               setCurrentInvoice(invoice);
                               setIsEditModalOpen(true);
                             }}
-                            title={t('edit')}
                           >
-                            <i className="fa-solid fa-pen text-xs"></i>
+                            <i className="fa-solid fa-pen-to-square text-sm"></i>
                           </button>
                           <button
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-900/20 transition-colors"
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                             onClick={() => handleDelete(invoice.id)}
-                            title={t('delete')}
                           >
-                            <i className="fa-solid fa-trash text-xs"></i>
+                            <i className="fa-solid fa-trash-can text-sm"></i>
                           </button>
                         </div>
                       </td>
@@ -491,6 +510,74 @@ export default function Invoices() {
           </table>
         </div>
       </div>
+
+      {/* Pagination */}
+      {!isLoading && filteredInvoices.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2">
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+            <span>{t('rowsPerPage')}:</span>
+            <select
+              className="px-2 py-1 rounded-xl border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-900/50 text-gray-900 dark:text-white input-themed text-sm"
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+            >
+              {[5, 10, 20, 50].map(size => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+            <span className="ml-2">
+              {(safePage - 1) * pageSize + 1}-{Math.min(safePage * pageSize, filteredInvoices.length)} {t('of')} {filteredInvoices.length} {t('totalRecords')}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              className={`w-9 h-9 flex items-center justify-center rounded-xl text-sm transition-colors ${safePage === 1 ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50'}`}
+              onClick={() => setCurrentPage(1)}
+              disabled={safePage === 1}
+            >
+              <i className="fa-solid fa-angles-left"></i>
+            </button>
+            <button
+              className={`w-9 h-9 flex items-center justify-center rounded-xl text-sm transition-colors ${safePage === 1 ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50'}`}
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={safePage === 1}
+            >
+              <i className="fa-solid fa-chevron-left"></i>
+            </button>
+            {getPageNumbers().map((page, idx) =>
+              page === '...' ? (
+                <span key={`ellipsis-${idx}`} className="w-9 h-9 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm">...</span>
+              ) : (
+                <button
+                  key={page}
+                  className={`w-9 h-9 flex items-center justify-center rounded-xl text-sm font-medium transition-colors ${
+                    safePage === page
+                      ? 'btn-gradient text-white shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50'
+                  }`}
+                  onClick={() => setCurrentPage(page as number)}
+                >
+                  {page}
+                </button>
+              )
+            )}
+            <button
+              className={`w-9 h-9 flex items-center justify-center rounded-xl text-sm transition-colors ${safePage === totalPages ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50'}`}
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={safePage === totalPages}
+            >
+              <i className="fa-solid fa-chevron-right"></i>
+            </button>
+            <button
+              className={`w-9 h-9 flex items-center justify-center rounded-xl text-sm transition-colors ${safePage === totalPages ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50'}`}
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={safePage === totalPages}
+            >
+              <i className="fa-solid fa-angles-right"></i>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 添加发票模态框 */}
       <AnimatePresence>
