@@ -5,10 +5,20 @@ import { ThemeContext } from '../contexts/ThemeContext';
 import { employeeAPI } from '../services/api';
 import { Employee } from '../services/mockData';
 import { toast } from 'sonner';
+import { format, parse, isValid } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
+import DatePicker from '../components/DatePicker';
 
 export default function Employees() {
-  const { t } = useContext(LanguageContext);
+  const { t, language } = useContext(LanguageContext);
   const { themeColor } = useContext(ThemeContext);
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '-';
+    const d = parse(dateStr, 'yyyy-MM-dd', new Date());
+    if (!isValid(d)) return dateStr;
+    return format(d, 'dd MMM yyyy', { locale: language === 'zh' ? zhCN : undefined });
+  };
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,6 +30,7 @@ export default function Employees() {
   const [nameError, setNameError] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
 
   useEffect(() => {
@@ -65,6 +76,7 @@ export default function Employees() {
 
   const handleEdit = async (employee: Partial<Employee>) => {
     if (!currentEmployee.id) return;
+    const empName = currentEmployee.name || '';
 
     try {
       await employeeAPI.updateEmployee(currentEmployee.id, employee);
@@ -73,9 +85,37 @@ export default function Employees() {
       ));
       setIsEditModalOpen(false);
       setCurrentEmployee({});
-      toast.success('员工信息已更新');
+      toast.custom((id) => (
+        <div
+          className="w-[360px] bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 overflow-hidden"
+          style={{ boxShadow: '0 20px 40px -12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
+        >
+          <div className="h-1 btn-gradient" />
+          <div className="p-4 flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl btn-gradient flex items-center justify-center flex-shrink-0">
+              <i className="fa-solid fa-check text-white text-sm" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">{language === 'zh' ? '更新成功' : 'Update Successful'}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                {language === 'zh' ? `${empName} 的信息已成功更新` : `${empName}'s info has been updated`}
+              </p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5">
+                <i className="fa-regular fa-clock mr-1" />
+                {format(new Date(), 'dd MMM yyyy HH:mm')}
+              </p>
+            </div>
+            <button
+              className="w-6 h-6 rounded-lg flex items-center justify-center text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors flex-shrink-0"
+              onClick={() => toast.dismiss(id)}
+            >
+              <i className="fa-solid fa-xmark text-xs" />
+            </button>
+          </div>
+        </div>
+      ), { duration: 4000 });
     } catch (error) {
-      toast.error('更新员工信息失败');
+      toast.error(language === 'zh' ? '更新员工信息失败' : 'Failed to update employee');
     }
   };
 
@@ -148,11 +188,9 @@ export default function Employees() {
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           {t('hireDate')}
         </label>
-        <input
-          type="date"
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
+        <DatePicker
           value={currentEmployee.hireDate || ''}
-          onChange={(e) => setCurrentEmployee({ ...currentEmployee, hireDate: e.target.value })}
+          onChange={(val) => setCurrentEmployee({ ...currentEmployee, hireDate: val })}
         />
       </div>
       <div>
@@ -376,6 +414,12 @@ export default function Employees() {
                     <td className="px-4 py-2.5 whitespace-nowrap text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                          onClick={() => { setCurrentEmployee(employee); setIsDetailModalOpen(true); }}
+                        >
+                          <i className="fa-solid fa-eye text-sm"></i>
+                        </button>
+                        <button
                           className="w-8 h-8 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                           onClick={() => {
                             setCurrentEmployee(employee);
@@ -467,6 +511,97 @@ export default function Employees() {
           </div>
         </div>
       )}
+
+      {/* Detail Modal */}
+      <AnimatePresence>
+        {isDetailModalOpen && currentEmployee.id && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4"
+            onClick={() => { setIsDetailModalOpen(false); setCurrentEmployee({}); }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ type: 'spring', duration: 0.3, bounce: 0.15 }}
+              className="modal-content relative bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 w-full max-w-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="absolute top-0 left-0 right-0 h-1 btn-gradient" />
+              <div className="p-6 border-b border-gray-100 dark:border-gray-800/80 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('employeeDetails')}</h3>
+                <button
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors"
+                  onClick={() => { setIsDetailModalOpen(false); setCurrentEmployee({}); }}
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800/50 p-5">
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">{t('basicInfo')}</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('name')}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{currentEmployee.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('department')}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentEmployee.department}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('position')}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentEmployee.position}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('hireDate')}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{formatDate(currentEmployee.hireDate)}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800/50 p-5">
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">{t('contactInfo')}</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('email')}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentEmployee.email}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('phone')}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentEmployee.phone}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('idType')}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentEmployee.idType ? t(currentEmployee.idType) : '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('idNo')}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentEmployee.idNo || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('salary')}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">¥{currentEmployee.salary?.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 border-t border-gray-100 dark:border-gray-800/80 flex justify-end">
+                <button
+                  className="px-4 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  onClick={() => { setIsDetailModalOpen(false); setCurrentEmployee({}); }}
+                >
+                  {t('close')}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Add Employee Modal */}
       <AnimatePresence>

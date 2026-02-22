@@ -39,7 +39,7 @@ export function Header() {
   };
 
   return (
-    <header className="glass-header h-16 flex items-center justify-between px-6 z-10 relative">
+    <header className="glass-header h-16 flex items-center justify-between px-6 z-30 relative">
       {/* Left side */}
       <div className="flex items-center">
         <div>

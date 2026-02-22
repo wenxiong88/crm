@@ -4,7 +4,9 @@
       "Bash(pnpm dev)",
       "Bash(npx tsc:*)",
       "Bash(curl:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(pnpm add:*)",
+      "Bash(git add:*)"
     ]
   }
 }
