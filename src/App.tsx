@@ -20,6 +20,7 @@ import Project from "@/pages/Project";
 import User from "@/pages/User";
 import UserRole from "@/pages/UserRole";
 import AccessRight from "@/pages/AccessRight";
+import Payroll from "@/pages/Payroll";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(true); // 默认已登录，用于演示
@@ -55,6 +56,7 @@ export default function App() {
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="human-resources/employees" element={<Employees />} />
+              <Route path="human-resources/payroll" element={<Payroll />} />
               <Route path="customers" element={<Customers />} />
               <Route path="master-data/suppliers" element={<Suppliers />} />
               <Route path="invoices" element={<Invoices />} />

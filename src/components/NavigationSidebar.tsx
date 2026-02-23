@@ -9,6 +9,7 @@ interface NavigationItem {
   id: string;
   labelKey: string;
   icon: string;
+  iconColor?: string;
   path?: string;
   badge?: number;
   children?: NavigationItem[];
@@ -26,30 +27,33 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
   const [expandedItems, setExpandedItems] = useState<string[]>(['masterData']);
 
   const navigationItems: NavigationItem[] = [
-    { id: 'dashboard', labelKey: 'dashboard', icon: 'fa-chart-pie', path: '/' },
-    { id: 'customers', labelKey: 'customers', icon: 'fa-user-group', path: '/customers' },
-    { id: 'invoices', labelKey: 'invoices', icon: 'fa-file-invoice-dollar', path: '/invoices', badge: 3 },
-    { id: 'receipts', labelKey: 'receipts', icon: 'fa-receipt', path: '/receipts' },
-    { id: 'reports', labelKey: 'reports', icon: 'fa-chart-line', path: '/reports' },
+    { id: 'dashboard', labelKey: 'dashboard', icon: 'fa-chart-pie', iconColor: '#a78bfa', path: '/' },
+    { id: 'customers', labelKey: 'customers', icon: 'fa-user-group', iconColor: '#38bdf8', path: '/customers' },
+    { id: 'invoices', labelKey: 'invoices', icon: 'fa-file-invoice-dollar', iconColor: '#fbbf24', path: '/invoices', badge: 3 },
+    { id: 'receipts', labelKey: 'receipts', icon: 'fa-receipt', iconColor: '#34d399', path: '/receipts' },
+    { id: 'reports', labelKey: 'reports', icon: 'fa-chart-line', iconColor: '#f472b6', path: '/reports' },
     {
       id: 'masterData',
       labelKey: 'masterData',
       icon: 'fa-database',
+      iconColor: '#fb923c',
       children: [
-        { id: 'company', labelKey: 'company', icon: 'fa-building-user', path: '/master-data/company' },
-        { id: 'project', labelKey: 'project', icon: 'fa-folder-open', path: '/master-data/project' },
-        { id: 'user', labelKey: 'user', icon: 'fa-user-gear', path: '/master-data/user' },
-        { id: 'userRole', labelKey: 'userRole', icon: 'fa-user-tag', path: '/master-data/user-role' },
-        { id: 'suppliers', labelKey: 'suppliers', icon: 'fa-building', path: '/master-data/suppliers' },
-        { id: 'accessRight', labelKey: 'accessRight', icon: 'fa-shield-halved', path: '/master-data/access-right' }
+        { id: 'company', labelKey: 'company', icon: 'fa-building-user', iconColor: '#60a5fa', path: '/master-data/company' },
+        { id: 'project', labelKey: 'project', icon: 'fa-folder-open', iconColor: '#fbbf24', path: '/master-data/project' },
+        { id: 'user', labelKey: 'user', icon: 'fa-user-gear', iconColor: '#a78bfa', path: '/master-data/user' },
+        { id: 'userRole', labelKey: 'userRole', icon: 'fa-user-tag', iconColor: '#2dd4bf', path: '/master-data/user-role' },
+        { id: 'suppliers', labelKey: 'suppliers', icon: 'fa-building', iconColor: '#fb923c', path: '/master-data/suppliers' },
+        { id: 'accessRight', labelKey: 'accessRight', icon: 'fa-shield-halved', iconColor: '#f87171', path: '/master-data/access-right' }
       ]
     },
     {
       id: 'humanResources',
       labelKey: 'humanResources',
       icon: 'fa-people-group',
+      iconColor: '#2dd4bf',
       children: [
-        { id: 'employees', labelKey: 'employees', icon: 'fa-users', path: '/human-resources/employees' }
+        { id: 'employees', labelKey: 'employees', icon: 'fa-users', iconColor: '#38bdf8', path: '/human-resources/employees' },
+        { id: 'payroll', labelKey: 'payroll', icon: 'fa-money-bill-wave', iconColor: '#34d399', path: '/human-resources/payroll' }
       ]
     },
   ];
@@ -87,7 +91,7 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
               isCollapsed ? 'justify-center py-3 px-2' : 'px-4 py-2.5',
               isItemActive
                 ? 'nav-item-active text-white'
-                : 'text-white/60 hover:text-white'
+                : 'text-white/80 hover:text-white'
             )}
             title={isCollapsed ? t(item.labelKey) : undefined}
           >
@@ -96,7 +100,7 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
                 "flex items-center justify-center w-5",
                 !isCollapsed && "mr-3"
               )}>
-                <i className={`fa-solid ${item.icon} text-[15px]`}></i>
+                <i className={`fa-solid ${item.icon} text-[15px]`} style={!isItemActive && item.iconColor ? { color: item.iconColor } : undefined}></i>
               </div>
               {!isCollapsed && <span className="text-[14px] font-medium">{t(item.labelKey)}</span>}
             </div>
@@ -116,7 +120,7 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
-                className="overflow-hidden ml-4 mt-1 space-y-0.5 border-l border-white/10 pl-3"
+                className="overflow-hidden ml-4 mt-1 space-y-0.5 border-l border-white/15 pl-3"
               >
                 {item.children?.map(child => renderMenuItem(child, true))}
               </motion.ul>
@@ -135,7 +139,7 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
             isCollapsed ? 'justify-center py-3 px-2' : isChild ? 'px-3 py-2' : 'px-4 py-2.5',
             isItemActive
               ? 'nav-item-active text-white'
-              : 'text-white/60 hover:text-white'
+              : 'text-white/80 hover:text-white'
           )}
           title={isCollapsed ? t(item.labelKey) : undefined}
         >
@@ -146,7 +150,7 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
             <i className={cn(
               `fa-solid ${item.icon}`,
               isChild ? "text-[13px]" : "text-[15px]"
-            )}></i>
+            )} style={!isItemActive && item.iconColor ? { color: item.iconColor } : undefined}></i>
           </div>
           {!isCollapsed && (
             <span className={cn(
@@ -181,7 +185,7 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
                 <h1 className="text-[15px] font-bold text-white tracking-tight">
                   {t('systemTitle')}
                 </h1>
-                <p className="text-[10px] text-white/40 font-medium tracking-widest uppercase">Enterprise</p>
+                <p className="text-[10px] text-white/50 font-medium tracking-widest uppercase">Enterprise</p>
               </div>
             </div>
           )}
@@ -205,7 +209,7 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
         <div className="px-4 mb-2">
           <button
             onClick={onToggle}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/40 hover:text-white/70 hover:bg-white/5 transition-all text-xs"
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/50 hover:text-white/70 hover:bg-white/5 transition-all text-xs"
             title={t('collapseSidebar')}
           >
             <span className="font-medium uppercase tracking-wider">{t('collapseSidebar') || 'Menu'}</span>
@@ -217,7 +221,7 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
         <div className="px-3 mb-2 flex justify-center">
           <button
             onClick={onToggle}
-            className="p-2 rounded-lg text-white/40 hover:text-white/70 hover:bg-white/5 transition-all"
+            className="p-2 rounded-lg text-white/50 hover:text-white/70 hover:bg-white/5 transition-all"
             title={t('expandSidebar')}
           >
             <i className="fa-solid fa-angles-right text-[11px]"></i>
@@ -241,8 +245,8 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
                 <i className="fa-solid fa-user text-white/70 text-xs"></i>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-white/80 truncate">Admin</p>
-                <p className="text-[10px] text-white/40 truncate">admin@crm.com</p>
+                <p className="text-xs font-medium text-white/90 truncate">Admin</p>
+                <p className="text-[10px] text-white/60 truncate">admin@crm.com</p>
               </div>
             </div>
           </div>

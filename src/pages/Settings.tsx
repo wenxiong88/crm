@@ -66,11 +66,11 @@ export default function Settings() {
             </label>
             <div className="flex space-x-3">
               {([
-                { key: 'blue', color: '#6366f1' },
-                { key: 'purple', color: '#8b5cf6' },
-                { key: 'green', color: '#14b8a6' },
-                { key: 'orange', color: '#f97316' },
-                { key: 'rose', color: '#f43f5e' },
+                { key: 'blue', from: '#4f46e5', to: '#06b6d4', label: '宝石蓝' },
+                { key: 'purple', from: '#7c3aed', to: '#ec4899', label: '梦幻紫' },
+                { key: 'green', from: '#059669', to: '#14b8a6', label: '翡翠绿' },
+                { key: 'orange', from: '#ea580c', to: '#eab308', label: '日落橙' },
+                { key: 'rose', from: '#e11d48', to: '#a855f7', label: '樱桃红' },
               ] as const).map(item => (
                 <button
                   key={item.key}
@@ -79,9 +79,10 @@ export default function Settings() {
                       ? 'ring-4 ring-offset-2 ring-gray-200 dark:ring-gray-700 scale-110'
                       : 'opacity-70 hover:opacity-100 hover:scale-105'
                   }`}
-                  style={{ backgroundColor: item.color }}
+                  style={{ background: `linear-gradient(135deg, ${item.from}, ${item.to})` }}
                   onClick={() => setThemeColor(item.key)}
-                  aria-label={`Set ${item.key} theme`}
+                  aria-label={item.label}
+                  title={item.label}
                 >
                   {themeColor === item.key && (
                     <i className="fa-solid fa-check text-white text-lg"></i>

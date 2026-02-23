@@ -140,6 +140,22 @@ export interface AccessRight {
   createdAt: string;
 }
 
+// 薪资数据类型
+export interface Payroll {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  department: string;
+  position: string;
+  month: string;
+  baseSalary: number;
+  bonus: number;
+  deductions: number;
+  netSalary: number;
+  paymentDate: string;
+  status: 'pending' | 'processed' | 'paid';
+}
+
 // 生成随机ID
 const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9);
@@ -361,3 +377,25 @@ export const mockAccessRights: AccessRight[] = [
   { id: generateId(), name: '删除用户', code: 'user.delete', description: '删除用户的权限', module: 'user', action: 'delete', createdAt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] },
   { id: generateId(), name: '创建公司', code: 'company.create', description: '创建新公司的权限', module: 'company', action: 'create', createdAt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }
 ];
+
+// 模拟薪资数据
+export const mockPayrolls: Payroll[] = Array.from({ length: 12 }, (_, i) => {
+  const emp = mockEmployees[i % mockEmployees.length];
+  const baseSalary = Math.round((8000 + Math.random() * 12000) * 100) / 100;
+  const bonus = Math.round(Math.random() * 5000 * 100) / 100;
+  const deductions = Math.round((500 + Math.random() * 2000) * 100) / 100;
+  return {
+    id: generateId(),
+    employeeId: emp.id,
+    employeeName: emp.name,
+    department: emp.department,
+    position: emp.position,
+    month: `2025-${String((i % 12) + 1).padStart(2, '0')}`,
+    baseSalary,
+    bonus,
+    deductions,
+    netSalary: Math.round((baseSalary + bonus - deductions) * 100) / 100,
+    paymentDate: new Date(2025, i % 12, 15 + Math.floor(Math.random() * 10)).toISOString().split('T')[0],
+    status: (['pending', 'processed', 'paid'] as const)[i % 3]
+  };
+});

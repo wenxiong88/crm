@@ -10,6 +10,7 @@ import {
   mockUsers,
   mockUserRoles,
   mockAccessRights,
+  mockPayrolls,
   Employee,
   Customer,
   Supplier,
@@ -21,7 +22,8 @@ import {
   Project,
   User,
   UserRole,
-  AccessRight
+  AccessRight,
+  Payroll
 } from './mockData';
 
 // 模拟API延迟
@@ -454,6 +456,45 @@ export const accessRightAPI = {
     const index = mockAccessRights.findIndex(r => r.id === id);
     if (index !== -1) {
       mockAccessRights.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+};
+
+// 薪资API
+export const payrollAPI = {
+  getPayrolls: async (): Promise<Payroll[]> => {
+    await delay();
+    return [...mockPayrolls];
+  },
+  getPayroll: async (id: string): Promise<Payroll | undefined> => {
+    await delay();
+    return mockPayrolls.find(p => p.id === id);
+  },
+  createPayroll: async (payroll: Omit<Payroll, 'id'>): Promise<Payroll> => {
+    await delay();
+    const newPayroll = {
+      ...payroll,
+      id: Math.random().toString(36).substr(2, 9)
+    };
+    mockPayrolls.push(newPayroll);
+    return newPayroll;
+  },
+  updatePayroll: async (id: string, payroll: Partial<Payroll>): Promise<Payroll | undefined> => {
+    await delay();
+    const index = mockPayrolls.findIndex(p => p.id === id);
+    if (index !== -1) {
+      mockPayrolls[index] = { ...mockPayrolls[index], ...payroll };
+      return mockPayrolls[index];
+    }
+    return undefined;
+  },
+  deletePayroll: async (id: string): Promise<boolean> => {
+    await delay();
+    const index = mockPayrolls.findIndex(p => p.id === id);
+    if (index !== -1) {
+      mockPayrolls.splice(index, 1);
       return true;
     }
     return false;

@@ -320,7 +320,27 @@ const translations = {
     enterFeedbackDescription: '请详细描述您的反馈或建议',
     noFeedback: '暂无反馈记录',
     createdAt: '创建时间',
-    feedbackImages: '反馈图片'
+    feedbackImages: '反馈图片',
+
+    // 薪资管理
+    payroll: '薪资管理',
+    managePayroll: '管理公司员工薪资信息',
+    addPayroll: '添加薪资',
+    editPayroll: '编辑薪资',
+    payrollDetails: '薪资详情',
+    noMatchingPayroll: '未找到匹配的薪资记录',
+    baseSalary: '基本工资',
+    bonus: '奖金',
+    deductions: '扣款',
+    netSalary: '实发工资',
+    paymentDate: '发放日期',
+    month: '薪资月份',
+    statusPending: '待处理',
+    statusProcessed: '已处理',
+    statusPaid: '已发放',
+    salaryInfo: '薪资信息',
+    selectEmployee: '选择员工',
+    selectStatus: '选择状态'
   },
   en: {
     // Navigation menu
@@ -625,7 +645,27 @@ const translations = {
     enterFeedbackDescription: 'Please describe your feedback or suggestions in detail',
     noFeedback: 'No feedback records',
     createdAt: 'Created at',
-    feedbackImages: 'Feedback images'
+    feedbackImages: 'Feedback images',
+
+    // Payroll
+    payroll: 'Payroll',
+    managePayroll: 'Manage employee payroll information',
+    addPayroll: 'Add Payroll',
+    editPayroll: 'Edit Payroll',
+    payrollDetails: 'Payroll Details',
+    noMatchingPayroll: 'No matching payroll records found',
+    baseSalary: 'Base Salary',
+    bonus: 'Bonus',
+    deductions: 'Deductions',
+    netSalary: 'Net Salary',
+    paymentDate: 'Payment Date',
+    month: 'Month',
+    statusPending: 'Pending',
+    statusProcessed: 'Processed',
+    statusPaid: 'Paid',
+    salaryInfo: 'Salary Info',
+    selectEmployee: 'Select Employee',
+    selectStatus: 'Select Status'
   }
 };
 
