@@ -19,12 +19,15 @@ export interface Employee {
 export interface Customer {
   id: string;
   name: string;
+  contactPerson: string;
   email: string;
   phone: string;
-  address: string;
-  createdAt: string;
-  lastPurchase: string;
-  totalSpent: number;
+  block: string;
+  unitNo: string;
+  street: string;
+  building: string;
+  postalCode: string;
+  country: string;
 }
 
 // 供应商数据类型
@@ -42,8 +45,10 @@ export interface Supplier {
 // 发票数据类型
 export interface Invoice {
   id: string;
+  invoiceNo: string;
   customerId: string;
   customerName: string;
+  contactPerson: string;
   date: string;
   dueDate: string;
   items: InvoiceItem[];
@@ -62,8 +67,11 @@ export interface InvoiceItem {
 // 收据数据类型
 export interface Receipt {
   id: string;
+  receiptNo: string;
   customerId: string;
   customerName: string;
+  invoiceId: string;
+  invoiceNo: string;
   date: string;
   amount: number;
   paymentMethod: string;
@@ -179,12 +187,15 @@ export const mockEmployees: Employee[] = Array.from({ length: 10 }, (_, i) => ({
 export const mockCustomers: Customer[] = Array.from({ length: 15 }, (_, i) => ({
   id: generateId(),
   name: `顾客 ${i + 1}`,
+  contactPerson: [`张三`, `李四`, `王五`, `赵六`, `陈七`, `林八`, `黄九`, `周十`, `吴明`, `郑华`, `孙杰`, `马丽`, `刘洋`, `杨帆`, `朱伟`][i],
   email: `customer${i + 1}@example.com`,
   phone: `1390013900${i}`,
-  address: `北京市朝阳区某某街道${i + 1}号`,
-  createdAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-  lastPurchase: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-  totalSpent: 100 + Math.random() * 9900
+  block: `${100 + i}`,
+  unitNo: `#${String(Math.floor(i / 3) + 1).padStart(2, '0')}-${String(i * 7 + 1).padStart(2, '0')}`,
+  street: [`Orchard Road`, `Marina Bay`, `Raffles Place`, `Bugis Street`, `Clementi Ave`][i % 5],
+  building: [`Tower ${i + 1}`, `Plaza ${i + 1}`, `Centre ${i + 1}`][i % 3],
+  postalCode: `${String(100000 + i * 1111).slice(0, 6)}`,
+  country: [`Singapore`, `Malaysia`, `China`, `Japan`, `Australia`][i % 5]
 }));
 
 // 模拟供应商数据
@@ -216,8 +227,10 @@ export const mockInvoices: Invoice[] = Array.from({ length: 12 }, (_, i) => {
   
   return {
     id: generateId(),
+    invoiceNo: `INV-${String(i + 1).padStart(4, '0')}`,
     customerId: mockCustomers[i % mockCustomers.length].id,
     customerName: mockCustomers[i % mockCustomers.length].name,
+    contactPerson: mockCustomers[i % mockCustomers.length].contactPerson,
     date: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     dueDate: new Date(Date.now() - Math.random() * 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     items,
@@ -227,15 +240,21 @@ export const mockInvoices: Invoice[] = Array.from({ length: 12 }, (_, i) => {
 });
 
 // 模拟收据数据
-export const mockReceipts: Receipt[] = Array.from({ length: 15 }, (_, i) => ({
-  id: generateId(),
-  customerId: mockCustomers[i % mockCustomers.length].id,
-  customerName: mockCustomers[i % mockCustomers.length].name,
-  date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-  amount: 50 + Math.random() * 4950,
-  paymentMethod: ['现金', '支付宝', '微信支付', '银行卡'][i % 4],
-  description: `购买商品 ${i + 1}`
-}));
+export const mockReceipts: Receipt[] = Array.from({ length: 15 }, (_, i) => {
+  const inv = mockInvoices[i % mockInvoices.length];
+  return {
+    id: generateId(),
+    receiptNo: `REC-${String(i + 1).padStart(4, '0')}`,
+    customerId: mockCustomers[i % mockCustomers.length].id,
+    customerName: mockCustomers[i % mockCustomers.length].name,
+    invoiceId: inv.id,
+    invoiceNo: inv.invoiceNo,
+    date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    amount: 50 + Math.random() * 4950,
+    paymentMethod: ['现金', '支付宝', '微信支付', '银行卡'][i % 4],
+    description: `购买商品 ${i + 1}`
+  };
+});
 
 // 仪表板数据
 export const dashboardData = {

@@ -239,18 +239,7 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
       {/* Footer */}
       {!isCollapsed && (
         <div className="p-4">
-          <div className="rounded-xl bg-white/5 p-3 backdrop-blur-sm">
-            <div className="flex items-center">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center mr-3">
-                <i className="fa-solid fa-user text-white/70 text-xs"></i>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-white/90 truncate">Admin</p>
-                <p className="text-[10px] text-white/60 truncate">admin@crm.com</p>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center justify-center text-white/25 mt-3">
+          <div className="flex items-center justify-center text-white/25">
             <span className="text-[10px] tracking-wider">v1.0.0</span>
           </div>
         </div>

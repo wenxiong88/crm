@@ -148,6 +148,15 @@ const translations = {
     systemSettings: '系统设置',
     settingsDescription: '配置系统参数和个人偏好',
 
+    // 客户字段
+    contactPerson: '联系人',
+    block: '楼栋',
+    unitNo: '单元号',
+    street: '街道',
+    building: '大厦',
+    postalCode: '邮编',
+    country: '国家',
+
     // 表格列
     createDate: '创建日期',
     lastPurchase: '最近购买',
@@ -182,6 +191,7 @@ const translations = {
     partnershipStart: '合作开始',
 
     // 发票
+    customer: '客户',
     allStatus: '全部状态',
     draft: '草稿',
     sent: '已发送',
@@ -200,6 +210,7 @@ const translations = {
     customerName: '客户名称',
     customerId: '客户ID',
     selectCustomer: '选择客户',
+    selectInvoice: '选择发票',
     clickToAddItems: '点击"添加项目"开始添加发票项目',
     printInvoice: '打印发票',
 
@@ -340,7 +351,18 @@ const translations = {
     statusPaid: '已发放',
     salaryInfo: '薪资信息',
     selectEmployee: '选择员工',
-    selectStatus: '选择状态'
+    selectStatus: '选择状态',
+
+    // 个人资料
+    profileTitle: '个人资料',
+    personalInfo: '个人信息',
+    accountInfo: '账户信息',
+    fullName: '姓名',
+    role: '角色',
+    joinDate: '加入日期',
+    lastLogin: '上次登录',
+    systemAdmin: '系统管理员',
+    close: '关闭'
   },
   en: {
     // Navigation menu
@@ -473,6 +495,15 @@ const translations = {
     systemSettings: 'System settings',
     settingsDescription: 'Configure system parameters and personal preferences',
 
+    // Customer fields
+    contactPerson: 'Contact Person',
+    block: 'Block',
+    unitNo: 'Unit No.',
+    street: 'Street',
+    building: 'Building',
+    postalCode: 'Postal Code',
+    country: 'Country',
+
     // Table columns
     createDate: 'Create date',
     lastPurchase: 'Last purchase',
@@ -507,6 +538,7 @@ const translations = {
     partnershipStart: 'Partnership start',
 
     // Invoices
+    customer: 'Customer',
     allStatus: 'All status',
     draft: 'Draft',
     sent: 'Sent',
@@ -525,6 +557,7 @@ const translations = {
     customerName: 'Customer name',
     customerId: 'Customer ID',
     selectCustomer: 'Select customer',
+    selectInvoice: 'Select invoice',
     clickToAddItems: 'Click "Add item" to start adding invoice items',
     printInvoice: 'Print invoice',
 
@@ -665,7 +698,18 @@ const translations = {
     statusPaid: 'Paid',
     salaryInfo: 'Salary Info',
     selectEmployee: 'Select Employee',
-    selectStatus: 'Select Status'
+    selectStatus: 'Select Status',
+
+    // Profile
+    profileTitle: 'Profile',
+    personalInfo: 'Personal Info',
+    accountInfo: 'Account Info',
+    fullName: 'Full Name',
+    role: 'Role',
+    joinDate: 'Join Date',
+    lastLogin: 'Last Login',
+    systemAdmin: 'System Administrator',
+    close: 'Close'
   }
 };
 

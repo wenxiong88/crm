@@ -6,9 +6,11 @@ import { ThemeContext } from '../contexts/ThemeContext';
 import { invoiceAPI, customerAPI } from '../services/api';
 import { Invoice, InvoiceItem, Customer } from '../services/mockData';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import DatePicker from '../components/DatePicker';
 
 export default function Invoices() {
-  const { t } = useContext(LanguageContext);
+  const { t, language } = useContext(LanguageContext);
   const { themeColor } = useContext(ThemeContext);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -21,6 +23,9 @@ export default function Invoices() {
   const [currentInvoice, setCurrentInvoice] = useState<Partial<Invoice>>({ items: [] });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
+  const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null);
+  const [focusedPriceItemId, setFocusedPriceItemId] = useState<string | null>(null);
+  const [priceInput, setPriceInput] = useState('');
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,13 +48,50 @@ export default function Invoices() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const showSuccessToast = (title: string, description: string) => {
+    toast.custom((id) => (
+      <div
+        className="w-[360px] bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 overflow-hidden"
+        style={{ boxShadow: '0 20px 40px -12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
+      >
+        <div className="h-1 btn-gradient" />
+        <div className="p-4 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl btn-gradient flex items-center justify-center flex-shrink-0">
+            <i className="fa-solid fa-check text-white text-sm" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">{title}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{description}</p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5">
+              <i className="fa-regular fa-clock mr-1" />
+              {format(new Date(), 'dd MMM yyyy HH:mm')}
+            </p>
+          </div>
+          <button
+            className="w-6 h-6 rounded-lg flex items-center justify-center text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors flex-shrink-0"
+            onClick={() => toast.dismiss(id)}
+          >
+            <i className="fa-solid fa-xmark text-xs" />
+          </button>
+        </div>
+      </div>
+    ), { duration: 4000 });
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const invNo = deleteTarget.invoiceNo;
     try {
-      await invoiceAPI.deleteInvoice(id);
-      setInvoices(invoices.filter(inv => inv.id !== id));
-      toast.success(t('invoiceDeleted'));
+      await invoiceAPI.deleteInvoice(deleteTarget.id);
+      setInvoices(invoices.filter(inv => inv.id !== deleteTarget.id));
+      showSuccessToast(
+        language === 'zh' ? '删除成功' : 'Deleted Successfully',
+        language === 'zh' ? `${invNo} 已被删除` : `${invNo} has been deleted`
+      );
     } catch (error) {
       toast.error(t('deleteInvoiceFailed'));
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -58,8 +100,12 @@ export default function Invoices() {
       const newInvoice = await invoiceAPI.createInvoice(invoice);
       setInvoices([...invoices, newInvoice]);
       setIsAddModalOpen(false);
+      const invNo = currentInvoice.invoiceNo || '';
       setCurrentInvoice({ items: [] });
-      toast.success(t('invoiceAdded'));
+      showSuccessToast(
+        language === 'zh' ? '添加成功' : 'Added Successfully',
+        language === 'zh' ? `${invNo} 已成功添加` : `${invNo} has been added`
+      );
     } catch (error) {
       toast.error(t('addInvoiceFailed'));
     }
@@ -67,6 +113,7 @@ export default function Invoices() {
 
   const handleEdit = async (invoice: Partial<Invoice>) => {
     if (!currentInvoice.id) return;
+    const invNo = currentInvoice.invoiceNo || '';
 
     try {
       await invoiceAPI.updateInvoice(currentInvoice.id, invoice);
@@ -75,7 +122,10 @@ export default function Invoices() {
       ));
       setIsEditModalOpen(false);
       setCurrentInvoice({ items: [] });
-      toast.success(t('invoiceUpdated'));
+      showSuccessToast(
+        language === 'zh' ? '更新成功' : 'Update Successful',
+        language === 'zh' ? `${invNo} 的信息已成功更新` : `${invNo}'s info has been updated`
+      );
     } catch (error) {
       toast.error(t('updateInvoiceFailed'));
     }
@@ -130,7 +180,8 @@ export default function Invoices() {
   const filteredInvoices = invoices.filter(invoice => {
     const matchesSearch =
       invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.id.toLowerCase().includes(searchTerm.toLowerCase());
+      invoice.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.invoiceNo.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
 
@@ -184,6 +235,8 @@ export default function Invoices() {
     }
   };
 
+  const todayStr = new Date().toISOString().split('T')[0];
+
   const renderInvoiceForm = (mode: 'add' | 'edit') => (
     <div className="p-6 space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -199,7 +252,8 @@ export default function Invoices() {
               setCurrentInvoice({
                 ...currentInvoice,
                 customerId: e.target.value,
-                customerName: selectedCustomer?.name
+                customerName: selectedCustomer?.name,
+                contactPerson: selectedCustomer?.contactPerson || ''
               });
             }}
           >
@@ -213,24 +267,31 @@ export default function Invoices() {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            {t('date')}
+            {t('contactPerson')}
           </label>
           <input
-            type="date"
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-900/50 text-sm text-gray-900 dark:text-white input-themed"
+            type="text"
+            readOnly
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700/50 bg-gray-50 dark:bg-gray-800/30 text-sm text-gray-500 dark:text-gray-400 cursor-not-allowed"
+            value={currentInvoice.contactPerson || ''}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            {t('date')}
+          </label>
+          <DatePicker
             value={currentInvoice.date || ''}
-            onChange={(e) => setCurrentInvoice({ ...currentInvoice, date: e.target.value })}
+            onChange={(val) => setCurrentInvoice({ ...currentInvoice, date: val })}
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             {t('dueDate')}
           </label>
-          <input
-            type="date"
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-900/50 text-sm text-gray-900 dark:text-white input-themed"
+          <DatePicker
             value={currentInvoice.dueDate || ''}
-            onChange={(e) => setCurrentInvoice({ ...currentInvoice, dueDate: e.target.value })}
+            onChange={(val) => setCurrentInvoice({ ...currentInvoice, dueDate: val })}
           />
         </div>
         <div>
@@ -294,12 +355,21 @@ export default function Invoices() {
                   {t('unitPrice')}
                 </label>
                 <input
-                  type="number"
-                  min="0"
-                  step="0.01"
+                  type="text"
                   className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-900/50 text-sm text-gray-900 dark:text-white input-themed"
-                  value={item.price || 0}
-                  onChange={(e) => updateInvoiceItem(item.id, 'price', parseFloat(e.target.value) || 0)}
+                  value={focusedPriceItemId === item.id ? priceInput : (item.price || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  onFocus={() => {
+                    setFocusedPriceItemId(item.id);
+                    setPriceInput(item.price != null ? String(item.price) : '');
+                  }}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === '' || /^\d*\.?\d{0,2}$/.test(raw)) {
+                      setPriceInput(raw);
+                      updateInvoiceItem(item.id, 'price', raw === '' ? 0 : parseFloat(raw));
+                    }
+                  }}
+                  onBlur={() => setFocusedPriceItemId(null)}
                 />
               </div>
               <div className="col-span-12 md:col-span-2">
@@ -307,7 +377,7 @@ export default function Invoices() {
                   {t('amount')}
                 </label>
                 <div className="w-full px-3 py-2 rounded-xl border border-gray-100 dark:border-gray-800/50 bg-gray-100 dark:bg-gray-800/50 text-sm font-medium text-gray-900 dark:text-white">
-                  ¥{(item.amount || 0).toFixed(2)}
+                  ¥{(item.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
               <div className="col-span-12 md:col-span-1 flex justify-center md:justify-end">
@@ -382,7 +452,14 @@ export default function Invoices() {
 
             <button
               className="btn-gradient rounded-xl text-sm font-medium text-white px-4 py-2 flex items-center justify-center"
-              onClick={() => setIsAddModalOpen(true)}
+              onClick={() => {
+                const maxNo = invoices.reduce((max, inv) => {
+                  const num = parseInt(inv.invoiceNo?.replace('INV-', '') || '0');
+                  return num > max ? num : max;
+                }, 0);
+                setCurrentInvoice({ items: [], date: todayStr, dueDate: todayStr, invoiceNo: `INV-${String(maxNo + 1).padStart(4, '0')}` });
+                setIsAddModalOpen(true);
+              }}
             >
               <i className="fa-solid fa-plus mr-2"></i>
               {t('add')}
@@ -398,10 +475,13 @@ export default function Invoices() {
             <thead>
               <tr className="border-b border-gray-100 dark:border-gray-800/80">
                 <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  ID
+                  {t('invoiceNumber')}
                 </th>
                 <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                   {t('customer')}
+                </th>
+                <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                  {t('contactPerson')}
                 </th>
                 <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                   {t('date')}
@@ -426,6 +506,7 @@ export default function Invoices() {
                   <tr key={i}>
                     <td className="px-6 py-4"><div className="skeleton h-4 w-20 rounded" /></td>
                     <td className="px-6 py-4"><div className="skeleton h-4 w-28 rounded" /></td>
+                    <td className="px-6 py-4"><div className="skeleton h-4 w-20 rounded" /></td>
                     <td className="px-6 py-4"><div className="skeleton h-4 w-24 rounded" /></td>
                     <td className="px-6 py-4"><div className="skeleton h-4 w-24 rounded" /></td>
                     <td className="px-6 py-4"><div className="skeleton h-4 w-20 rounded" /></td>
@@ -435,7 +516,7 @@ export default function Invoices() {
                 ))
               ) : filteredInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-16 text-center">
+                  <td colSpan={8} className="px-6 py-16 text-center">
                     <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800/50 flex items-center justify-center mx-auto mb-3">
                       <i className="fa-solid fa-file-invoice text-gray-400 dark:text-gray-500 text-lg"></i>
                     </div>
@@ -454,10 +535,13 @@ export default function Invoices() {
                       className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors"
                     >
                       <td className="px-4 py-2.5 whitespace-nowrap">
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">{invoice.id}</span>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">{invoice.invoiceNo}</span>
                       </td>
                       <td className="px-4 py-2.5 whitespace-nowrap">
                         <span className="text-sm text-gray-600 dark:text-gray-400">{invoice.customerName}</span>
+                      </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">{invoice.contactPerson}</span>
                       </td>
                       <td className="px-4 py-2.5 whitespace-nowrap">
                         <span className="text-sm text-gray-500 dark:text-gray-400">{invoice.date}</span>
@@ -496,7 +580,7 @@ export default function Invoices() {
                           </button>
                           <button
                             className="w-8 h-8 rounded-lg flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                            onClick={() => handleDelete(invoice.id)}
+                            onClick={() => setDeleteTarget(invoice)}
                           >
                             <i className="fa-solid fa-trash-can text-sm"></i>
                           </button>
@@ -655,7 +739,14 @@ export default function Invoices() {
               {/* Gradient accent bar */}
               <div className="h-1 w-full btn-gradient" />
               <div className="p-6 border-b border-gray-100 dark:border-gray-800/50 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('editInvoice')}</h3>
+                <div className="flex items-center gap-3">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('editInvoice')}</h3>
+                  {currentInvoice.invoiceNo && (
+                    <span className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800/50 text-xs font-medium text-gray-500 dark:text-gray-400">
+                      {currentInvoice.invoiceNo}
+                    </span>
+                  )}
+                </div>
                 <button
                   className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-800 transition-colors"
                   onClick={() => {
@@ -727,7 +818,7 @@ export default function Invoices() {
                       <div className="space-y-3">
                         <div>
                           <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('invoiceNumber')}</p>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">{currentInvoice.id}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{currentInvoice.invoiceNo}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('date')}</p>
@@ -757,6 +848,10 @@ export default function Invoices() {
                         <div>
                           <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('customerName')}</p>
                           <p className="text-sm font-medium text-gray-900 dark:text-white">{currentInvoice.customerName}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('contactPerson')}</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{currentInvoice.contactPerson || '-'}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('customerID')}</p>
@@ -797,10 +892,10 @@ export default function Invoices() {
                                 <span className="text-sm text-gray-500 dark:text-gray-400">{item.quantity}</span>
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap">
-                                <span className="text-sm text-gray-500 dark:text-gray-400">¥{item.price.toFixed(2)}</span>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">¥{item.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap text-right">
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">¥{item.amount.toFixed(2)}</span>
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">¥{item.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                               </td>
                             </tr>
                           ))}
@@ -829,6 +924,51 @@ export default function Invoices() {
                 >
                   <i className="fa-solid fa-print text-xs"></i>
                   {t('printInvoice')}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4"
+            onClick={() => setDeleteTarget(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ type: 'spring', duration: 0.3, bounce: 0.15 }}
+              className="modal-content relative bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 w-full max-w-sm overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 text-center">
+                <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+                  <i className="fa-solid fa-triangle-exclamation text-red-500 text-xl"></i>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('confirmDelete')}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('confirmDeleteMessage')}</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-2">{deleteTarget.invoiceNo}</p>
+              </div>
+              <div className="px-6 pb-6 flex gap-3">
+                <button
+                  className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  onClick={() => setDeleteTarget(null)}
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 rounded-xl text-sm font-medium text-white transition-colors"
+                  onClick={handleDelete}
+                >
+                  {t('delete')}
                 </button>
               </div>
             </motion.div>
@@ -871,7 +1011,7 @@ export default function Invoices() {
             </div>
             <div style={{ textAlign: 'right' }}>
               <p style={{ fontSize: '14px', color: '#666', margin: '0 0 4px 0' }}>{t('invoiceNumber')}</p>
-              <p style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>{currentInvoice.id}</p>
+              <p style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>{currentInvoice.invoiceNo}</p>
             </div>
           </div>
 
@@ -905,6 +1045,10 @@ export default function Invoices() {
                     <td style={{ padding: '2px 0' }}>{currentInvoice.customerName}</td>
                   </tr>
                   <tr>
+                    <td style={{ padding: '2px 16px 2px 0', color: '#666' }}>{t('contactPerson')}:</td>
+                    <td style={{ padding: '2px 0' }}>{currentInvoice.contactPerson}</td>
+                  </tr>
+                  <tr>
                     <td style={{ padding: '2px 16px 2px 0', color: '#666' }}>{t('customerId')}:</td>
                     <td style={{ padding: '2px 0' }}>{currentInvoice.customerId}</td>
                   </tr>
@@ -928,8 +1072,8 @@ export default function Invoices() {
                 <tr key={item.id}>
                   <td style={{ padding: '10px 12px', borderBottom: '1px solid #eee' }}>{item.description}</td>
                   <td style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '1px solid #eee' }}>{item.quantity}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', borderBottom: '1px solid #eee' }}>¥{item.price.toFixed(2)}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', borderBottom: '1px solid #eee' }}>¥{item.amount.toFixed(2)}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', borderBottom: '1px solid #eee' }}>¥{item.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', borderBottom: '1px solid #eee' }}>¥{item.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 </tr>
               ))}
             </tbody>

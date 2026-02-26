@@ -1,24 +1,121 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LanguageContext } from '../contexts/LanguageContext';
 import { ThemeContext } from '../contexts/ThemeContext';
 import { customerAPI } from '../services/api';
 import { Customer } from '../services/mockData';
 import { toast } from 'sonner';
-import { format, parse, isValid } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
-import DatePicker from '../components/DatePicker';
+import { format } from 'date-fns';
+
+const COUNTRY_OPTIONS = [
+  'Singapore', 'Malaysia', 'China', 'Japan', 'Australia',
+  'Indonesia', 'Thailand', 'Vietnam', 'Philippines', 'South Korea',
+  'India', 'Hong Kong', 'Taiwan', 'United States', 'United Kingdom',
+  'Germany', 'France', 'Canada', 'New Zealand', 'Myanmar',
+];
+
+function CountrySelect({ value, onChange, placeholder }: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filtered = COUNTRY_OPTIONS.filter(c =>
+    c.toLowerCase().includes(search.toLowerCase())
+  );
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => { setOpen(!open); setTimeout(() => inputRef.current?.focus(), 50); }}
+        className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-sm border rounded-lg transition-all cursor-pointer ${
+          open
+            ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30'
+            : 'border-gray-200 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600'
+        } bg-white dark:bg-gray-900/50`}
+      >
+        <span className={value ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}>
+          {value || placeholder || 'Select...'}
+        </span>
+        <i className={`fa-solid fa-chevron-down text-[10px] text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}></i>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.98 }}
+            transition={{ duration: 0.15 }}
+            className="absolute z-50 bottom-full mb-1.5 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700/50 rounded-xl shadow-xl shadow-black/10 dark:shadow-black/30 overflow-hidden"
+          >
+            {/* Search */}
+            <div className="p-2 border-b border-gray-100 dark:border-gray-800/50">
+              <div className="relative">
+                <i className="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400"></i>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  className="w-full pl-7 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-800/50 border-0 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-700"
+                  placeholder={placeholder || 'Search...'}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Options */}
+            <div className="max-h-48 overflow-y-auto py-1 scrollbar-thin">
+              {filtered.length === 0 ? (
+                <div className="px-3 py-4 text-center text-sm text-gray-400 dark:text-gray-500">No results</div>
+              ) : (
+                filtered.map(c => {
+                  const isSelected = c === value;
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => { onChange(c); setOpen(false); setSearch(''); }}
+                      className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${
+                        isSelected
+                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/40'
+                      }`}
+                    >
+                      <span>{c}</span>
+                      {isSelected && <i className="fa-solid fa-check text-[10px] text-blue-500"></i>}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export default function Customers() {
   const { t, language } = useContext(LanguageContext);
   const { themeColor } = useContext(ThemeContext);
 
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '-';
-    const d = parse(dateStr, 'yyyy-MM-dd', new Date());
-    if (!isValid(d)) return dateStr;
-    return format(d, 'dd MMM yyyy', { locale: language === 'zh' ? zhCN : undefined });
-  };
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,8 +126,6 @@ export default function Customers() {
   const [pageSize, setPageSize] = useState(5);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
-  const [amountInput, setAmountInput] = useState('');
-  const [isAmountFocused, setIsAmountFocused] = useState(false);
 
   useEffect(() => {
     fetchCustomers();
@@ -50,15 +145,49 @@ export default function Customers() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    const delName = deleteTarget.name;
     try {
       await customerAPI.deleteCustomer(deleteTarget.id);
       setCustomers(customers.filter(cus => cus.id !== deleteTarget.id));
-      toast.success(t('deleteSuccess'));
+      showSuccessToast(
+        language === 'zh' ? '删除成功' : 'Deleted Successfully',
+        language === 'zh' ? `${delName} 已被删除` : `${delName} has been deleted`
+      );
     } catch (error) {
-      toast.error(t('deleteError'));
+      toast.error(language === 'zh' ? '删除客户失败' : 'Failed to delete customer');
     } finally {
       setDeleteTarget(null);
     }
+  };
+
+  const showSuccessToast = (title: string, description: string) => {
+    toast.custom((id) => (
+      <div
+        className="w-[360px] bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 overflow-hidden"
+        style={{ boxShadow: '0 20px 40px -12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
+      >
+        <div className="h-1 btn-gradient" />
+        <div className="p-4 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl btn-gradient flex items-center justify-center flex-shrink-0">
+            <i className="fa-solid fa-check text-white text-sm" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">{title}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{description}</p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5">
+              <i className="fa-regular fa-clock mr-1" />
+              {format(new Date(), 'dd MMM yyyy HH:mm')}
+            </p>
+          </div>
+          <button
+            className="w-6 h-6 rounded-lg flex items-center justify-center text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors flex-shrink-0"
+            onClick={() => toast.dismiss(id)}
+          >
+            <i className="fa-solid fa-xmark text-xs" />
+          </button>
+        </div>
+      </div>
+    ), { duration: 4000 });
   };
 
   const handleAdd = async (customer: Omit<Customer, 'id'>) => {
@@ -66,15 +195,20 @@ export default function Customers() {
       const newCustomer = await customerAPI.createCustomer(customer);
       setCustomers([...customers, newCustomer]);
       setIsAddModalOpen(false);
+      const cusName = currentCustomer.name || '';
       setCurrentCustomer({});
-      toast.success('客户已添加');
+      showSuccessToast(
+        language === 'zh' ? '添加成功' : 'Added Successfully',
+        language === 'zh' ? `${cusName} 已成功添加` : `${cusName} has been added`
+      );
     } catch (error) {
-      toast.error('添加客户失败');
+      toast.error(language === 'zh' ? '添加客户失败' : 'Failed to add customer');
     }
   };
 
   const handleEdit = async (customer: Partial<Customer>) => {
     if (!currentCustomer.id) return;
+    const cusName = currentCustomer.name || '';
     try {
       await customerAPI.updateCustomer(currentCustomer.id, customer);
       setCustomers(customers.map(cus =>
@@ -82,16 +216,21 @@ export default function Customers() {
       ));
       setIsEditModalOpen(false);
       setCurrentCustomer({});
-      toast.success('客户信息已更新');
+      showSuccessToast(
+        language === 'zh' ? '更新成功' : 'Update Successful',
+        language === 'zh' ? `${cusName} 的信息已成功更新` : `${cusName}'s info has been updated`
+      );
     } catch (error) {
-      toast.error('更新客户信息失败');
+      toast.error(language === 'zh' ? '更新客户信息失败' : 'Failed to update customer');
     }
   };
 
   const filteredCustomers = customers.filter(cus =>
     cus.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cus.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
     cus.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cus.address.toLowerCase().includes(searchTerm.toLowerCase())
+    cus.street.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cus.country.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / pageSize));
@@ -116,90 +255,97 @@ export default function Customers() {
     return name.charAt(0).toUpperCase();
   };
 
-  const SkeletonRow = () => (
-    <tr>
-      <td className="px-5 py-4"><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg skeleton" /><div className="w-20 h-4 skeleton" /></div></td>
-      <td className="px-5 py-4"><div className="w-32 h-4 skeleton" /></td>
-      <td className="px-5 py-4"><div className="w-24 h-4 skeleton" /></td>
-      <td className="px-5 py-4"><div className="w-28 h-4 skeleton" /></td>
-      <td className="px-5 py-4"><div className="w-20 h-4 skeleton" /></td>
-      <td className="px-5 py-4"><div className="w-20 h-4 skeleton" /></td>
-      <td className="px-5 py-4"><div className="w-16 h-4 skeleton" /></td>
-      <td className="px-5 py-4"><div className="w-16 h-4 skeleton ml-auto" /></td>
-    </tr>
+  // Shared field renderer for both view and edit modes
+  const DetailField = ({ label, value, editable, field }: {
+    label: string;
+    value: string | undefined;
+    editable?: boolean;
+    field?: keyof Customer;
+  }) => (
+    <div className="min-w-0">
+      <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{label}</p>
+      {editable && field ? (
+        field === 'country' ? (
+          <CountrySelect
+            value={(currentCustomer.country as string) || ''}
+            onChange={(v) => setCurrentCustomer({ ...currentCustomer, country: v })}
+            placeholder={`${t('search')}...`}
+          />
+        ) : (
+          <input
+            type={field === 'email' ? 'email' : 'text'}
+            className="w-full px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-900/50 dark:text-white input-themed focus:ring-2 focus:ring-offset-0 transition-shadow"
+            value={(currentCustomer[field] as string) || ''}
+            onChange={(e) => setCurrentCustomer({ ...currentCustomer, [field]: e.target.value })}
+          />
+        )
+      ) : (
+        <p className="text-sm text-gray-800 dark:text-gray-200 truncate">{value || '-'}</p>
+      )}
+    </div>
   );
 
-  const renderFormFields = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('name')}</label>
-        <input
-          type="text"
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-          value={currentCustomer.name || ''}
-          onChange={(e) => setCurrentCustomer({ ...currentCustomer, name: e.target.value })}
-        />
+  // Card-based modal content used by both View & Add/Edit
+  const renderModalBody = (editable: boolean) => (
+    <div className="p-6 space-y-5 max-h-[60vh] overflow-y-auto">
+      {/* Avatar Header */}
+      <div className="flex items-center gap-4 pb-5 border-b border-gray-100 dark:border-gray-800/50">
+        <div className="w-14 h-14 rounded-2xl avatar-container text-lg flex-shrink-0 shadow-lg">
+          {getInitials(currentCustomer.name || '?')}
+        </div>
+        <div className="flex-1 min-w-0">
+          {editable ? (
+            <div>
+              <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t('name')}</p>
+              <input
+                type="text"
+                className="w-full px-3 py-1.5 text-base font-semibold border border-gray-200 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-900/50 dark:text-white input-themed"
+                value={currentCustomer.name || ''}
+                onChange={(e) => setCurrentCustomer({ ...currentCustomer, name: e.target.value })}
+              />
+            </div>
+          ) : (
+            <>
+              <h4 className="text-base font-bold text-gray-900 dark:text-white truncate">{currentCustomer.name}</h4>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{currentCustomer.email}</p>
+            </>
+          )}
+        </div>
       </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('email')}</label>
-        <input
-          type="email"
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-          value={currentCustomer.email || ''}
-          onChange={(e) => setCurrentCustomer({ ...currentCustomer, email: e.target.value })}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('phone')}</label>
-        <input
-          type="text"
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-          value={currentCustomer.phone || ''}
-          onChange={(e) => setCurrentCustomer({ ...currentCustomer, phone: e.target.value })}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('address')}</label>
-        <input
-          type="text"
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-          value={currentCustomer.address || ''}
-          onChange={(e) => setCurrentCustomer({ ...currentCustomer, address: e.target.value })}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('createDate')}</label>
-        <DatePicker
-          value={currentCustomer.createdAt || ''}
-          onChange={(val) => setCurrentCustomer({ ...currentCustomer, createdAt: val })}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lastPurchase')}</label>
-        <DatePicker
-          value={currentCustomer.lastPurchase || ''}
-          onChange={(val) => setCurrentCustomer({ ...currentCustomer, lastPurchase: val })}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('totalSpent')}</label>
-        <input
-          type="text"
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-          value={isAmountFocused ? amountInput : (currentCustomer.totalSpent != null ? currentCustomer.totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '')}
-          onFocus={() => {
-            setIsAmountFocused(true);
-            setAmountInput(currentCustomer.totalSpent != null ? String(currentCustomer.totalSpent) : '');
-          }}
-          onChange={(e) => {
-            const raw = e.target.value;
-            if (raw === '' || /^\d*\.?\d{0,2}$/.test(raw)) {
-              setAmountInput(raw);
-              setCurrentCustomer({ ...currentCustomer, totalSpent: raw === '' ? 0 : parseFloat(raw) });
-            }
-          }}
-          onBlur={() => setIsAmountFocused(false)}
-        />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Contact Info Card */}
+        <div className="rounded-xl bg-gradient-to-br from-gray-50 to-gray-50/50 dark:from-gray-800/30 dark:to-gray-800/10 border border-gray-100 dark:border-gray-800/50 p-5 space-y-4">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-6 h-6 rounded-md btn-gradient flex items-center justify-center">
+              <i className="fa-solid fa-address-book text-[10px] text-white"></i>
+            </div>
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{t('contactInfo')}</h4>
+          </div>
+          <DetailField label={t('contactPerson')} value={currentCustomer.contactPerson} editable={editable} field="contactPerson" />
+          <DetailField label={t('email')} value={currentCustomer.email} editable={editable} field="email" />
+          <DetailField label={t('phone')} value={currentCustomer.phone} editable={editable} field="phone" />
+        </div>
+
+        {/* Address Card */}
+        <div className="rounded-xl bg-gradient-to-br from-gray-50 to-gray-50/50 dark:from-gray-800/30 dark:to-gray-800/10 border border-gray-100 dark:border-gray-800/50 p-5 space-y-4">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-6 h-6 rounded-md btn-gradient flex items-center justify-center">
+              <i className="fa-solid fa-location-dot text-[10px] text-white"></i>
+            </div>
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{t('address')}</h4>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <DetailField label={t('block')} value={currentCustomer.block} editable={editable} field="block" />
+            <DetailField label={t('unitNo')} value={currentCustomer.unitNo} editable={editable} field="unitNo" />
+          </div>
+          <DetailField label={t('street')} value={currentCustomer.street} editable={editable} field="street" />
+          <DetailField label={t('building')} value={currentCustomer.building} editable={editable} field="building" />
+          <div className="grid grid-cols-2 gap-4">
+            <DetailField label={t('postalCode')} value={currentCustomer.postalCode} editable={editable} field="postalCode" />
+            <DetailField label={t('country')} value={currentCustomer.country} editable={editable} field="country" />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -237,31 +383,69 @@ export default function Customers() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800/80 overflow-hidden">
+      {/* Customer Table */}
+      <div className="bg-white dark:bg-gray-900/80 rounded-xl border border-gray-100 dark:border-gray-800/80 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead>
               <tr className="border-b border-gray-100 dark:border-gray-800/80">
-                <th className="px-5 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t('name')}</th>
-                <th className="px-5 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t('email')}</th>
-                <th className="px-5 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t('phone')}</th>
-                <th className="px-5 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t('address')}</th>
-                <th className="px-5 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t('createDate')}</th>
-                <th className="px-5 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t('lastPurchase')}</th>
-                <th className="px-5 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t('totalSpent')}</th>
-                <th className="px-5 py-3.5 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t('actions')}</th>
+                <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                  {t('name')}
+                </th>
+                <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                  {t('contactPerson')}
+                </th>
+                <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                  {t('email')}
+                </th>
+                <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                  {t('phone')}
+                </th>
+                <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                  {t('country')}
+                </th>
+                <th scope="col" className="px-4 py-2.5 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                  {t('actions')}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
               {isLoading ? (
-                Array.from({ length: pageSize }).map((_, i) => <SkeletonRow key={i} />)
+                Array.from({ length: pageSize }).map((_, i) => (
+                  <tr key={`skeleton-${i}`}>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="skeleton w-8 h-8 rounded-lg flex-shrink-0" />
+                        <div className="skeleton h-4 w-24 rounded" />
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <div className="skeleton h-4 w-20 rounded" />
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <div className="skeleton h-4 w-36 rounded" />
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <div className="skeleton h-4 w-28 rounded" />
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <div className="skeleton h-4 w-20 rounded" />
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <div className="skeleton w-8 h-8 rounded-lg" />
+                        <div className="skeleton w-8 h-8 rounded-lg" />
+                        <div className="skeleton w-8 h-8 rounded-lg" />
+                      </div>
+                    </td>
+                  </tr>
+                ))
               ) : filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-16 text-center">
+                  <td colSpan={6} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center">
-                      <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
-                        <i className="fa-solid fa-magnifying-glass text-gray-300 dark:text-gray-600 text-xl"></i>
+                      <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
+                        <i className="fa-solid fa-magnifying-glass text-gray-400 dark:text-gray-500 text-lg"></i>
                       </div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">{t('noMatchingCustomers')}</p>
                     </div>
@@ -285,22 +469,19 @@ export default function Customers() {
                       </div>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
+                      <div className="text-sm text-gray-600 dark:text-gray-400">{customer.contactPerson}</div>
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
                       <div className="text-sm text-gray-600 dark:text-gray-400">{customer.email}</div>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <div className="text-sm text-gray-600 dark:text-gray-400">{customer.phone}</div>
                     </td>
-                    <td className="px-4 py-2.5">
-                      <div className="text-sm text-gray-600 dark:text-gray-400 max-w-[200px] truncate">{customer.address}</div>
-                    </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="text-sm text-gray-600 dark:text-gray-400">{formatDate(customer.createdAt)}</div>
-                    </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="text-sm text-gray-600 dark:text-gray-400">{formatDate(customer.lastPurchase)}</div>
-                    </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">¥{customer.totalSpent.toLocaleString()}</div>
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100/80 dark:bg-gray-800/60 px-2.5 py-1 rounded-full">
+                        <i className="fa-solid fa-location-dot text-[9px] text-gray-400 dark:text-gray-500"></i>
+                        {customer.country}
+                      </span>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-right">
                       <div className="flex items-center justify-end gap-1">
@@ -428,48 +609,7 @@ export default function Customers() {
                   <i className="fa-solid fa-xmark"></i>
                 </button>
               </div>
-              <div className="p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800/50 p-5">
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">{t('basicInfo')}</h4>
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('name')}</p>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{currentCustomer.name}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('address')}</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentCustomer.address}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('createDate')}</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{formatDate(currentCustomer.createdAt)}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800/50 p-5">
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">{t('contactInfo')}</h4>
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('email')}</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentCustomer.email}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('phone')}</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentCustomer.phone}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('lastPurchase')}</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{formatDate(currentCustomer.lastPurchase)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('totalSpent')}</p>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">¥{currentCustomer.totalSpent?.toLocaleString()}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {renderModalBody(false)}
               <div className="p-6 border-t border-gray-100 dark:border-gray-800/80 flex justify-end">
                 <button
                   className="px-4 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -511,9 +651,7 @@ export default function Customers() {
                   <i className="fa-solid fa-xmark"></i>
                 </button>
               </div>
-              <div className="p-6">
-                {renderFormFields()}
-              </div>
+              {renderModalBody(true)}
               <div className="p-6 border-t border-gray-100 dark:border-gray-800/80 flex justify-end space-x-3">
                 <button
                   className="px-4 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -561,9 +699,7 @@ export default function Customers() {
                   <i className="fa-solid fa-xmark"></i>
                 </button>
               </div>
-              <div className="p-6">
-                {renderFormFields()}
-              </div>
+              {renderModalBody(true)}
               <div className="p-6 border-t border-gray-100 dark:border-gray-800/80 flex justify-end space-x-3">
                 <button
                   className="px-4 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"

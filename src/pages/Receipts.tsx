@@ -2,15 +2,18 @@ import { useState, useEffect, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LanguageContext } from '../contexts/LanguageContext';
 import { ThemeContext } from '../contexts/ThemeContext';
-import { receiptAPI, customerAPI } from '../services/api';
-import { Receipt, Customer } from '../services/mockData';
+import { receiptAPI, customerAPI, invoiceAPI } from '../services/api';
+import { Receipt, Customer, Invoice } from '../services/mockData';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import DatePicker from '../components/DatePicker';
 
 export default function Receipts() {
-  const { t } = useContext(LanguageContext);
+  const { t, language } = useContext(LanguageContext);
   const { themeColor } = useContext(ThemeContext);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -19,6 +22,11 @@ export default function Receipts() {
   const [currentReceipt, setCurrentReceipt] = useState<Partial<Receipt>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
+  const [deleteTarget, setDeleteTarget] = useState<Receipt | null>(null);
+  const [isAmountFocused, setIsAmountFocused] = useState(false);
+  const [amountInput, setAmountInput] = useState('');
+
+  const todayStr = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
     fetchData();
@@ -27,12 +35,14 @@ export default function Receipts() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [receiptsData, customersData] = await Promise.all([
+      const [receiptsData, customersData, invoicesData] = await Promise.all([
         receiptAPI.getReceipts(),
-        customerAPI.getCustomers()
+        customerAPI.getCustomers(),
+        invoiceAPI.getInvoices()
       ]);
       setReceipts(receiptsData);
       setCustomers(customersData);
+      setInvoices(invoicesData);
     } catch (error) {
       toast.error(t('fetchDataFailed'));
     } finally {
@@ -40,13 +50,50 @@ export default function Receipts() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const showSuccessToast = (title: string, description: string) => {
+    toast.custom((id) => (
+      <div
+        className="w-[360px] bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 overflow-hidden"
+        style={{ boxShadow: '0 20px 40px -12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
+      >
+        <div className="h-1 btn-gradient" />
+        <div className="p-4 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl btn-gradient flex items-center justify-center flex-shrink-0">
+            <i className="fa-solid fa-check text-white text-sm" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">{title}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{description}</p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5">
+              <i className="fa-regular fa-clock mr-1" />
+              {format(new Date(), 'dd MMM yyyy HH:mm')}
+            </p>
+          </div>
+          <button
+            className="w-6 h-6 rounded-lg flex items-center justify-center text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors flex-shrink-0"
+            onClick={() => toast.dismiss(id)}
+          >
+            <i className="fa-solid fa-xmark text-xs" />
+          </button>
+        </div>
+      </div>
+    ), { duration: 4000 });
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const recNo = deleteTarget.receiptNo;
     try {
-      await receiptAPI.deleteReceipt(id);
-      setReceipts(receipts.filter(rec => rec.id !== id));
-      toast.success(t('receiptDeleted'));
+      await receiptAPI.deleteReceipt(deleteTarget.id);
+      setReceipts(receipts.filter(rec => rec.id !== deleteTarget.id));
+      showSuccessToast(
+        language === 'zh' ? '删除成功' : 'Deleted Successfully',
+        language === 'zh' ? `${recNo} 已被删除` : `${recNo} has been deleted`
+      );
     } catch (error) {
       toast.error(t('deleteReceiptFailed'));
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -55,8 +102,12 @@ export default function Receipts() {
       const newReceipt = await receiptAPI.createReceipt(receipt);
       setReceipts([...receipts, newReceipt]);
       setIsAddModalOpen(false);
+      const recNo = currentReceipt.receiptNo || '';
       setCurrentReceipt({});
-      toast.success(t('receiptAdded'));
+      showSuccessToast(
+        language === 'zh' ? '添加成功' : 'Added Successfully',
+        language === 'zh' ? `${recNo} 已成功添加` : `${recNo} has been added`
+      );
     } catch (error) {
       toast.error(t('addReceiptFailed'));
     }
@@ -64,15 +115,19 @@ export default function Receipts() {
 
   const handleEdit = async (receipt: Partial<Receipt>) => {
     if (!currentReceipt.id) return;
-    
+    const recNo = currentReceipt.receiptNo || '';
+
     try {
       await receiptAPI.updateReceipt(currentReceipt.id, receipt);
-      setReceipts(receipts.map(rec => 
+      setReceipts(receipts.map(rec =>
         rec.id === currentReceipt.id ? { ...rec, ...receipt } : rec
       ));
       setIsEditModalOpen(false);
       setCurrentReceipt({});
-      toast.success(t('receiptUpdated'));
+      showSuccessToast(
+        language === 'zh' ? '更新成功' : 'Update Successful',
+        language === 'zh' ? `${recNo} 的信息已成功更新` : `${recNo}'s info has been updated`
+      );
     } catch (error) {
       toast.error(t('updateReceiptFailed'));
     }
@@ -81,7 +136,8 @@ export default function Receipts() {
   const filteredReceipts = receipts.filter(receipt => {
     return (
       receipt.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      receipt.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      receipt.receiptNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      receipt.invoiceNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       receipt.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       receipt.paymentMethod.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -104,6 +160,123 @@ export default function Receipts() {
     }
     return pages;
   };
+
+  // Invoices filtered by selected customer
+  const customerInvoices = currentReceipt.customerId
+    ? invoices.filter(inv => inv.customerId === currentReceipt.customerId)
+    : [];
+
+  const renderFormFields = (mode: 'add' | 'edit') => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {mode === 'edit' && (
+        <div className="md:col-span-2">
+          <div className="flex items-center gap-2 mb-4 pb-4 border-b border-gray-100 dark:border-gray-800/50">
+            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('receiptNumber')}:</span>
+            <span className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800/50 text-xs font-medium text-gray-500 dark:text-gray-400">
+              {currentReceipt.receiptNo}
+            </span>
+          </div>
+        </div>
+      )}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('customer')}</label>
+        <select
+          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
+          value={currentReceipt.customerId || ''}
+          onChange={(e) => {
+            const selectedCustomer = customers.find(c => c.id === e.target.value);
+            setCurrentReceipt({
+              ...currentReceipt,
+              customerId: e.target.value,
+              customerName: selectedCustomer?.name,
+              invoiceId: '',
+              invoiceNo: ''
+            });
+          }}
+        >
+          <option value="">{t('selectCustomer')}</option>
+          {customers.map(customer => (
+            <option key={customer.id} value={customer.id}>{customer.name}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('invoiceNumber')}</label>
+        <select
+          className={`w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl text-sm input-themed ${
+            !currentReceipt.customerId
+              ? 'bg-gray-50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+              : 'bg-white dark:bg-gray-900/50 dark:text-white'
+          }`}
+          value={currentReceipt.invoiceId || ''}
+          disabled={!currentReceipt.customerId}
+          onChange={(e) => {
+            const selectedInvoice = invoices.find(inv => inv.id === e.target.value);
+            setCurrentReceipt({
+              ...currentReceipt,
+              invoiceId: e.target.value,
+              invoiceNo: selectedInvoice?.invoiceNo || ''
+            });
+          }}
+        >
+          <option value="">{t('selectInvoice')}</option>
+          {customerInvoices.map(inv => (
+            <option key={inv.id} value={inv.id}>{inv.invoiceNo}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('date')}</label>
+        <DatePicker
+          value={currentReceipt.date || ''}
+          onChange={(val) => setCurrentReceipt({ ...currentReceipt, date: val })}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('amount')}</label>
+        <input
+          type="text"
+          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
+          value={isAmountFocused ? amountInput : (currentReceipt.amount != null ? currentReceipt.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '')}
+          onFocus={() => {
+            setIsAmountFocused(true);
+            setAmountInput(currentReceipt.amount != null ? String(currentReceipt.amount) : '');
+          }}
+          onChange={(e) => {
+            const raw = e.target.value;
+            if (raw === '' || /^\d*\.?\d{0,2}$/.test(raw)) {
+              setAmountInput(raw);
+              setCurrentReceipt({ ...currentReceipt, amount: raw === '' ? 0 : parseFloat(raw) });
+            }
+          }}
+          onBlur={() => setIsAmountFocused(false)}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('paymentMethod')}</label>
+        <select
+          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
+          value={currentReceipt.paymentMethod || ''}
+          onChange={(e) => setCurrentReceipt({ ...currentReceipt, paymentMethod: e.target.value })}
+        >
+          <option value="">{t('selectPaymentMethod')}</option>
+          <option value="现金">{t('cash')}</option>
+          <option value="支付宝">{t('alipay')}</option>
+          <option value="微信支付">{t('wechat')}</option>
+          <option value="银行卡">{t('bankCard')}</option>
+        </select>
+      </div>
+      <div className="md:col-span-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('description')}</label>
+        <textarea
+          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
+          rows={3}
+          value={currentReceipt.description || ''}
+          onChange={(e) => setCurrentReceipt({ ...currentReceipt, description: e.target.value })}
+        ></textarea>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-3">
@@ -129,7 +302,14 @@ export default function Receipts() {
 
             <button
               className="btn-gradient rounded-xl text-sm font-medium text-white px-4 py-2 flex items-center justify-center"
-              onClick={() => setIsAddModalOpen(true)}
+              onClick={() => {
+                const maxNo = receipts.reduce((max, rec) => {
+                  const num = parseInt(rec.receiptNo?.replace('REC-', '') || '0');
+                  return num > max ? num : max;
+                }, 0);
+                setCurrentReceipt({ date: todayStr, receiptNo: `REC-${String(maxNo + 1).padStart(4, '0')}` });
+                setIsAddModalOpen(true);
+              }}
             >
               <i className="fa-solid fa-plus mr-2"></i>
               {t('add')}
@@ -137,7 +317,7 @@ export default function Receipts() {
           </div>
         </div>
       </div>
-      
+
       {/* 收据表格 */}
       <div className="bg-white dark:bg-gray-900/80 rounded-xl border border-gray-100 dark:border-gray-800/80 overflow-hidden">
         <div className="overflow-x-auto">
@@ -145,10 +325,13 @@ export default function Receipts() {
             <thead>
               <tr className="border-b border-gray-100 dark:border-gray-800/80">
                 <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  ID
+                  {t('receiptNumber')}
                 </th>
                 <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                   {t('customer')}
+                </th>
+                <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                  {t('invoiceNumber')}
                 </th>
                 <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                   {t('date')}
@@ -159,9 +342,6 @@ export default function Receipts() {
                 <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                   {t('paymentMethod')}
                 </th>
-                <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  {t('description')}
-                </th>
                 <th scope="col" className="px-4 py-2.5 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                   {t('actions')}
                 </th>
@@ -171,12 +351,12 @@ export default function Receipts() {
               {isLoading ? (
                 Array.from({ length: pageSize }).map((_, i) => (
                   <tr key={`skeleton-${i}`}>
-                    <td className="px-4 py-2.5 whitespace-nowrap"><div className="skeleton h-4 w-20 rounded" /></td>
+                    <td className="px-4 py-2.5 whitespace-nowrap"><div className="skeleton h-4 w-24 rounded" /></td>
+                    <td className="px-4 py-2.5 whitespace-nowrap"><div className="skeleton h-4 w-24 rounded" /></td>
                     <td className="px-4 py-2.5 whitespace-nowrap"><div className="skeleton h-4 w-24 rounded" /></td>
                     <td className="px-4 py-2.5 whitespace-nowrap"><div className="skeleton h-4 w-24 rounded" /></td>
                     <td className="px-4 py-2.5 whitespace-nowrap"><div className="skeleton h-4 w-20 rounded" /></td>
                     <td className="px-4 py-2.5 whitespace-nowrap"><div className="skeleton h-4 w-20 rounded" /></td>
-                    <td className="px-4 py-2.5 whitespace-nowrap"><div className="skeleton h-4 w-28 rounded" /></td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-right"><div className="flex items-center justify-end gap-2"><div className="skeleton w-8 h-8 rounded-lg" /><div className="skeleton w-8 h-8 rounded-lg" /><div className="skeleton w-8 h-8 rounded-lg" /></div></td>
                   </tr>
                 ))
@@ -201,22 +381,22 @@ export default function Receipts() {
                     className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors"
                   >
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">{receipt.id}</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">{receipt.receiptNo}</div>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <div className="text-sm text-gray-600 dark:text-gray-400">{receipt.customerName}</div>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
+                      <div className="text-sm text-gray-600 dark:text-gray-400">{receipt.invoiceNo}</div>
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
                       <div className="text-sm text-gray-600 dark:text-gray-400">{receipt.date}</div>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">¥{(receipt.amount).toLocaleString()}</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">¥{(receipt.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <div className="text-sm text-gray-600 dark:text-gray-400">{receipt.paymentMethod}</div>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs">{receipt.description}</div>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-right">
                       <div className="flex items-center justify-end gap-1">
@@ -240,7 +420,7 @@ export default function Receipts() {
                         </button>
                         <button
                           className="w-8 h-8 rounded-lg flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                          onClick={() => handleDelete(receipt.id)}
+                          onClick={() => setDeleteTarget(receipt)}
                         >
                           <i className="fa-solid fa-trash-can text-sm"></i>
                         </button>
@@ -253,7 +433,7 @@ export default function Receipts() {
           </table>
         </div>
       </div>
-      
+
       {/* Pagination */}
       {!isLoading && filteredReceipts.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2">
@@ -351,67 +531,7 @@ export default function Receipts() {
                 </button>
               </div>
               <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('customer')}</label>
-                    <select
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-                      value={currentReceipt.customerId || ''}
-                      onChange={(e) => {
-                        const selectedCustomer = customers.find(c => c.id === e.target.value);
-                        setCurrentReceipt({ ...currentReceipt, customerId: e.target.value, customerName: selectedCustomer?.name });
-                      }}
-                    >
-                      <option value="">{t('selectCustomer')}</option>
-                      {customers.map(customer => (
-                        <option key={customer.id} value={customer.id}>{customer.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('date')}</label>
-                    <input
-                      type="date"
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-                      value={currentReceipt.date || ''}
-                      onChange={(e) => setCurrentReceipt({ ...currentReceipt, date: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('amount')}</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-                      value={currentReceipt.amount || ''}
-                      onChange={(e) => setCurrentReceipt({ ...currentReceipt, amount: parseFloat(e.target.value) })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('paymentMethod')}</label>
-                    <select
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-                      value={currentReceipt.paymentMethod || ''}
-                      onChange={(e) => setCurrentReceipt({ ...currentReceipt, paymentMethod: e.target.value })}
-                    >
-                      <option value="">{t('selectPaymentMethod')}</option>
-                      <option value="现金">{t('cash')}</option>
-                      <option value="支付宝">{t('alipay')}</option>
-                      <option value="微信支付">{t('wechat')}</option>
-                      <option value="银行卡">{t('bankCard')}</option>
-                    </select>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('description')}</label>
-                    <textarea
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-                      rows={3}
-                      value={currentReceipt.description || ''}
-                      onChange={(e) => setCurrentReceipt({ ...currentReceipt, description: e.target.value })}
-                    ></textarea>
-                  </div>
-                </div>
+                {renderFormFields('add')}
               </div>
               <div className="p-6 border-t border-gray-100 dark:border-gray-800/80 flex justify-end space-x-3">
                 <button
@@ -461,67 +581,7 @@ export default function Receipts() {
                 </button>
               </div>
               <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('customer')}</label>
-                    <select
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-                      value={currentReceipt.customerId || ''}
-                      onChange={(e) => {
-                        const selectedCustomer = customers.find(c => c.id === e.target.value);
-                        setCurrentReceipt({ ...currentReceipt, customerId: e.target.value, customerName: selectedCustomer?.name });
-                      }}
-                    >
-                      <option value="">{t('selectCustomer')}</option>
-                      {customers.map(customer => (
-                        <option key={customer.id} value={customer.id}>{customer.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('date')}</label>
-                    <input
-                      type="date"
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-                      value={currentReceipt.date || ''}
-                      onChange={(e) => setCurrentReceipt({ ...currentReceipt, date: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('amount')}</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-                      value={currentReceipt.amount || ''}
-                      onChange={(e) => setCurrentReceipt({ ...currentReceipt, amount: parseFloat(e.target.value) })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('paymentMethod')}</label>
-                    <select
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-                      value={currentReceipt.paymentMethod || ''}
-                      onChange={(e) => setCurrentReceipt({ ...currentReceipt, paymentMethod: e.target.value })}
-                    >
-                      <option value="">{t('selectPaymentMethod')}</option>
-                      <option value="现金">{t('cash')}</option>
-                      <option value="支付宝">{t('alipay')}</option>
-                      <option value="微信支付">{t('wechat')}</option>
-                      <option value="银行卡">{t('bankCard')}</option>
-                    </select>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('description')}</label>
-                    <textarea
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-                      rows={3}
-                      value={currentReceipt.description || ''}
-                      onChange={(e) => setCurrentReceipt({ ...currentReceipt, description: e.target.value })}
-                    ></textarea>
-                  </div>
-                </div>
+                {renderFormFields('edit')}
               </div>
               <div className="p-6 border-t border-gray-100 dark:border-gray-800/80 flex justify-end space-x-3">
                 <button
@@ -577,7 +637,11 @@ export default function Receipts() {
                     <div className="space-y-3">
                       <div>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('receiptNumber')}</p>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{currentReceipt.id}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{currentReceipt.receiptNo}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('invoiceNumber')}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentReceipt.invoiceNo || '-'}</p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('date')}</p>
@@ -585,7 +649,7 @@ export default function Receipts() {
                       </div>
                       <div>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('amount')}</p>
-                        <p className="text-xl font-bold text-gray-900 dark:text-white">¥{(currentReceipt.amount || 0).toLocaleString()}</p>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white">¥{(currentReceipt.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                       </div>
                     </div>
                   </div>
@@ -616,11 +680,55 @@ export default function Receipts() {
               </div>
               <div className="p-6 border-t border-gray-100 dark:border-gray-800/80 flex justify-end">
                 <button
-                  className="btn-gradient rounded-xl text-sm font-medium text-white px-5 py-2 flex items-center gap-2"
-                  onClick={() => { toast.info(t('printFeatureComingSoon')); }}
+                  className="px-4 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  onClick={() => setIsDetailModalOpen(false)}
                 >
-                  <i className="fa-solid fa-print text-xs"></i>
-                  {t('print')}
+                  {t('close')}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4"
+            onClick={() => setDeleteTarget(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ type: 'spring', duration: 0.3, bounce: 0.15 }}
+              className="modal-content relative bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 w-full max-w-sm overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 text-center">
+                <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+                  <i className="fa-solid fa-triangle-exclamation text-red-500 text-xl"></i>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('confirmDelete')}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('confirmDeleteMessage')}</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-2">{deleteTarget.receiptNo}</p>
+              </div>
+              <div className="px-6 pb-6 flex gap-3">
+                <button
+                  className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700/50 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  onClick={() => setDeleteTarget(null)}
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 rounded-xl text-sm font-medium text-white transition-colors"
+                  onClick={handleDelete}
+                >
+                  {t('delete')}
                 </button>
               </div>
             </motion.div>
