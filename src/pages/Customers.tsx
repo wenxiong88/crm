@@ -341,9 +341,13 @@ export default function Customers() {
           </div>
           <DetailField label={t('street')} value={currentCustomer.street} editable={editable} field="street" />
           <DetailField label={t('building')} value={currentCustomer.building} editable={editable} field="building" />
-          <div className="grid grid-cols-2 gap-4">
-            <DetailField label={t('postalCode')} value={currentCustomer.postalCode} editable={editable} field="postalCode" />
-            <DetailField label={t('country')} value={currentCustomer.country} editable={editable} field="country" />
+          <div className="grid grid-cols-5 gap-4">
+            <div className="col-span-2">
+              <DetailField label={t('postalCode')} value={currentCustomer.postalCode} editable={editable} field="postalCode" />
+            </div>
+            <div className="col-span-3">
+              <DetailField label={t('country')} value={currentCustomer.country} editable={editable} field="country" />
+            </div>
           </div>
         </div>
       </div>

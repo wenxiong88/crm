@@ -31,7 +31,7 @@ export function Header() {
       if (themeDropdownRef.current && !themeDropdownRef.current.contains(event.target as Node)) {
         setIsThemeDropdownOpen(false);
       }
-    };
+};
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -45,6 +45,7 @@ export function Header() {
   };
 
   return (
+    <>
     <header className="glass-header h-16 flex items-center justify-between px-6 z-30 relative">
       {/* Left side */}
       <div className="flex items-center">
@@ -195,23 +196,25 @@ export function Header() {
                 </div>
 
                 <div className="py-1">
-                  {[
-                    { icon: 'fa-user', label: t('profile') },
-                    { icon: 'fa-bell', label: t('notifications'), badge: 3 },
-                  ].map((item, idx) => (
-                    <button
-                      key={idx}
-                      className="flex items-center w-full px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                    >
-                      <i className={`fa-solid ${item.icon} w-4 text-center mr-3 text-xs text-gray-400`}></i>
-                      <span className="flex-1 text-left">{item.label}</span>
-                      {item.badge && (
-                        <span className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                          {item.badge}
-                        </span>
-                      )}
-                    </button>
-                  ))}
+                  <button
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    onClick={() => {
+                      setIsProfileOpen(true);
+                      setIsDropdownOpen(false);
+                    }}
+                  >
+                    <i className="fa-solid fa-user w-4 text-center mr-3 text-xs text-gray-400"></i>
+                    <span className="flex-1 text-left">{t('profile')}</span>
+                  </button>
+                  <button
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  >
+                    <i className="fa-solid fa-bell w-4 text-center mr-3 text-xs text-gray-400"></i>
+                    <span className="flex-1 text-left">{t('notifications')}</span>
+                    <span className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                      3
+                    </span>
+                  </button>
                 </div>
 
                 <div className="border-t border-gray-100 dark:border-gray-800 pt-1">
@@ -246,5 +249,166 @@ export function Header() {
         </div>
       </div>
     </header>
+
+    {/* Profile Modal — rendered outside header to avoid z-index stacking context */}
+    <AnimatePresence>
+      {isProfileOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4"
+          onClick={() => setIsProfileOpen(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0, y: 10 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 10 }}
+            transition={{ type: 'spring', duration: 0.3, bounce: 0.15 }}
+            className="modal-content relative bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Gradient top bar */}
+            <div className="absolute top-0 left-0 right-0 h-1 btn-gradient z-10" />
+
+            {/* Header */}
+            <div className="p-6 border-b border-gray-100 dark:border-gray-800/80 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('profileTitle')}</h3>
+              <button
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors"
+                onClick={() => setIsProfileOpen(false)}
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            {/* Avatar hero section */}
+            <div className="relative">
+              {/* Banner */}
+              <div
+                className="h-32 relative overflow-hidden"
+                style={{
+                  background: `linear-gradient(135deg, ${themeColors[themeColor].from}, ${themeColors[themeColor].to})`,
+                }}
+              >
+                {/* Decorative circles */}
+                <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-10 bg-white" />
+                <div className="absolute -bottom-12 -left-8 w-36 h-36 rounded-full opacity-10 bg-white" />
+                <div className="absolute top-6 left-1/2 -translate-x-1/2 w-60 h-20 rounded-full opacity-[0.07] bg-white blur-2xl" />
+              </div>
+
+              {/* Avatar floating on banner */}
+              <div className="absolute left-1/2 -translate-x-1/2 -bottom-14 flex flex-col items-center">
+                <div className="relative">
+                  <div
+                    className="w-28 h-28 rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-xl ring-4 ring-white dark:ring-gray-900/95"
+                    style={{
+                      background: `linear-gradient(135deg, ${themeColors[themeColor].from}, ${themeColors[themeColor].to})`,
+                    }}
+                  >
+                    A
+                  </div>
+                  {/* Online indicator */}
+                  <span className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-400 rounded-full ring-[3px] ring-white dark:ring-gray-900/95">
+                    <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-40"></span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Name & role — below avatar */}
+            <div className="text-center mt-16 px-6">
+              <h4 className="text-xl font-bold text-gray-900 dark:text-white">Admin</h4>
+              <span
+                className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full text-xs font-semibold text-white"
+                style={{
+                  background: `linear-gradient(135deg, ${themeColors[themeColor].from}, ${themeColors[themeColor].to})`,
+                }}
+              >
+                <i className="fa-solid fa-shield-halved text-[10px]"></i>
+                {t('systemAdmin')}
+              </span>
+            </div>
+
+            {/* Stats row */}
+            <div className="flex items-center justify-center gap-8 mt-5 px-6">
+              {[
+                { value: '128', label: language === 'zh' ? '客户' : 'Clients' },
+                { value: '56', label: language === 'zh' ? '项目' : 'Projects' },
+                { value: '2.1k', label: language === 'zh' ? '操作' : 'Actions' },
+              ].map((stat, idx) => (
+                <div key={idx} className="text-center">
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">{stat.value}</p>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Info cards */}
+            <div className="p-6 space-y-6 mt-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Personal info */}
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800/50 p-5">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+                    <i className="fa-solid fa-user-circle mr-2 text-xs opacity-50"></i>
+                    {t('personalInfo')}
+                  </h4>
+                  <div className="space-y-3">
+                    {[
+                      { icon: 'fa-user', label: t('fullName'), value: 'Admin' },
+                      { icon: 'fa-envelope', label: t('email'), value: 'admin@crm.com' },
+                      { icon: 'fa-phone', label: t('phone'), value: '+86 138-0000-0001' },
+                      { icon: 'fa-building', label: t('department'), value: language === 'zh' ? '技术部' : 'Technology' },
+                    ].map((item, idx) => (
+                      <div key={idx}>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5 flex items-center gap-1.5">
+                          <i className={`fa-solid ${item.icon} text-[10px]`} style={{ color: themeColors[themeColor].from }}></i>
+                          {item.label}
+                        </p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white pl-4">{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Account info */}
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800/50 p-5">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+                    <i className="fa-solid fa-shield-halved mr-2 text-xs opacity-50"></i>
+                    {t('accountInfo')}
+                  </h4>
+                  <div className="space-y-3">
+                    {[
+                      { icon: 'fa-id-badge', label: t('role'), value: t('systemAdmin') },
+                      { icon: 'fa-calendar-plus', label: t('joinDate'), value: '2024-01-15' },
+                      { icon: 'fa-clock', label: t('lastLogin'), value: new Date().toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) },
+                    ].map((item, idx) => (
+                      <div key={idx}>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5 flex items-center gap-1.5">
+                          <i className={`fa-solid ${item.icon} text-[10px]`} style={{ color: themeColors[themeColor].from }}></i>
+                          {item.label}
+                        </p>
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 pl-4">{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-100 dark:border-gray-800/80 flex justify-end">
+              <button
+                className="px-4 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                onClick={() => setIsProfileOpen(false)}
+              >
+                {t('close')}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+    </>
   );
 }
