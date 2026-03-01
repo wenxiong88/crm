@@ -57,17 +57,17 @@ export default function App() {
               <Route index element={<Dashboard />} />
               <Route path="human-resources/employees" element={<Employees />} />
               <Route path="human-resources/payroll" element={<Payroll />} />
-              <Route path="customers" element={<Customers />} />
-              <Route path="master-data/suppliers" element={<Suppliers />} />
-              <Route path="invoices" element={<Invoices />} />
-              <Route path="receipts" element={<Receipts />} />
-              <Route path="reports" element={<Reports />} />
+              <Route path="finance/invoices" element={<Invoices />} />
+              <Route path="finance/receipts" element={<Receipts />} />
+              <Route path="finance/reports" element={<Reports />} />
               <Route path="feedback" element={<Feedback />} />
-              <Route path="master-data/company" element={<Company />} />
-              <Route path="master-data/project" element={<Project />} />
-              <Route path="master-data/user" element={<User />} />
-              <Route path="master-data/user-role" element={<UserRole />} />
-              <Route path="master-data/access-right" element={<AccessRight />} />
+              <Route path="administrator/customers" element={<Customers />} />
+              <Route path="administrator/company" element={<Company />} />
+              <Route path="administrator/project" element={<Project />} />
+              <Route path="administrator/user" element={<User />} />
+              <Route path="administrator/user-role" element={<UserRole />} />
+              <Route path="administrator/suppliers" element={<Suppliers />} />
+              <Route path="administrator/access-right" element={<AccessRight />} />
               <Route path="settings" element={<Settings />} />
             </Route>
           </Routes>

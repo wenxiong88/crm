@@ -24,26 +24,19 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
   const { themeColor, themeMode } = useContext(ThemeContext);
   const { t } = useContext(LanguageContext);
   const location = useLocation();
-  const [expandedItems, setExpandedItems] = useState<string[]>(['masterData']);
+  const [expandedItems, setExpandedItems] = useState<string[]>(['finance', 'administrator']);
 
   const navigationItems: NavigationItem[] = [
     { id: 'dashboard', labelKey: 'dashboard', icon: 'fa-chart-pie', iconColor: '#a78bfa', path: '/' },
-    { id: 'customers', labelKey: 'customers', icon: 'fa-user-group', iconColor: '#38bdf8', path: '/customers' },
-    { id: 'invoices', labelKey: 'invoices', icon: 'fa-file-invoice-dollar', iconColor: '#fbbf24', path: '/invoices', badge: 3 },
-    { id: 'receipts', labelKey: 'receipts', icon: 'fa-receipt', iconColor: '#34d399', path: '/receipts' },
-    { id: 'reports', labelKey: 'reports', icon: 'fa-chart-line', iconColor: '#f472b6', path: '/reports' },
     {
-      id: 'masterData',
-      labelKey: 'masterData',
-      icon: 'fa-database',
-      iconColor: '#fb923c',
+      id: 'finance',
+      labelKey: 'finance',
+      icon: 'fa-coins',
+      iconColor: '#fbbf24',
       children: [
-        { id: 'company', labelKey: 'company', icon: 'fa-building-user', iconColor: '#60a5fa', path: '/master-data/company' },
-        { id: 'project', labelKey: 'project', icon: 'fa-folder-open', iconColor: '#fbbf24', path: '/master-data/project' },
-        { id: 'user', labelKey: 'user', icon: 'fa-user-gear', iconColor: '#a78bfa', path: '/master-data/user' },
-        { id: 'userRole', labelKey: 'userRole', icon: 'fa-user-tag', iconColor: '#2dd4bf', path: '/master-data/user-role' },
-        { id: 'suppliers', labelKey: 'suppliers', icon: 'fa-building', iconColor: '#fb923c', path: '/master-data/suppliers' },
-        { id: 'accessRight', labelKey: 'accessRight', icon: 'fa-shield-halved', iconColor: '#f87171', path: '/master-data/access-right' }
+        { id: 'invoices', labelKey: 'invoices', icon: 'fa-file-invoice-dollar', iconColor: '#fbbf24', path: '/finance/invoices', badge: 3 },
+        { id: 'receipts', labelKey: 'receipts', icon: 'fa-receipt', iconColor: '#34d399', path: '/finance/receipts' },
+        { id: 'reports', labelKey: 'reports', icon: 'fa-chart-line', iconColor: '#f472b6', path: '/finance/reports' },
       ]
     },
     {
@@ -54,6 +47,21 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
       children: [
         { id: 'employees', labelKey: 'employees', icon: 'fa-users', iconColor: '#38bdf8', path: '/human-resources/employees' },
         { id: 'payroll', labelKey: 'payroll', icon: 'fa-money-bill-wave', iconColor: '#34d399', path: '/human-resources/payroll' }
+      ]
+    },
+    {
+      id: 'administrator',
+      labelKey: 'administrator',
+      icon: 'fa-database',
+      iconColor: '#fb923c',
+      children: [
+        { id: 'company', labelKey: 'company', icon: 'fa-building-user', iconColor: '#60a5fa', path: '/administrator/company' },
+        { id: 'project', labelKey: 'project', icon: 'fa-folder-open', iconColor: '#fbbf24', path: '/administrator/project' },
+        { id: 'user', labelKey: 'user', icon: 'fa-user-gear', iconColor: '#a78bfa', path: '/administrator/user' },
+        { id: 'userRole', labelKey: 'userRole', icon: 'fa-user-tag', iconColor: '#2dd4bf', path: '/administrator/user-role' },
+        { id: 'customers', labelKey: 'customers', icon: 'fa-user-group', iconColor: '#38bdf8', path: '/administrator/customers' },
+        { id: 'suppliers', labelKey: 'suppliers', icon: 'fa-building', iconColor: '#fb923c', path: '/administrator/suppliers' },
+        { id: 'accessRight', labelKey: 'accessRight', icon: 'fa-shield-halved', iconColor: '#f87171', path: '/administrator/access-right' }
       ]
     },
   ];
