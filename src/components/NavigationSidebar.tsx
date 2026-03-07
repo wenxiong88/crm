@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react';
+import { useContext, useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ThemeContext } from '../contexts/ThemeContext';
 import { LanguageContext } from '../contexts/LanguageContext';
@@ -24,7 +24,69 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
   const { themeColor, themeMode } = useContext(ThemeContext);
   const { t } = useContext(LanguageContext);
   const location = useLocation();
-  const [expandedItems, setExpandedItems] = useState<string[]>(['finance', 'administrator']);
+  const [expandedItems, setExpandedItems] = useState<string[]>(['finance', 'administrator', 'personalization']);
+
+  // Demo mode state
+  const [demoMode, setDemoMode] = useState<boolean>(() => {
+    try {
+      const val = localStorage.getItem('crm-demo-mode');
+      return val === null ? true : val === 'true';
+    } catch {
+      return true;
+    }
+  });
+
+  // Quick Access favorites from localStorage
+  const [favoriteIds, setFavoriteIds] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('crm-quick-access');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Listen for storage changes (when user updates favorites on the QuickAccess page)
+  const syncFavorites = useCallback(() => {
+    try {
+      const stored = localStorage.getItem('crm-quick-access');
+      setFavoriteIds(stored ? JSON.parse(stored) : []);
+    } catch {
+      setFavoriteIds([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('storage', syncFavorites);
+    // Also poll on focus to catch same-tab changes
+    const interval = setInterval(syncFavorites, 2000);
+    return () => {
+      window.removeEventListener('storage', syncFavorites);
+      clearInterval(interval);
+    };
+  }, [syncFavorites]);
+
+  // Map of all available modules for quick access lookup
+  const allModulesMap: Record<string, NavigationItem> = {
+    invoices: { id: 'invoices', labelKey: 'invoices', icon: 'fa-file-invoice-dollar', iconColor: '#fbbf24', path: '/finance/invoices' },
+    receipts: { id: 'receipts', labelKey: 'receipts', icon: 'fa-receipt', iconColor: '#34d399', path: '/finance/receipts' },
+    reports: { id: 'reports', labelKey: 'reports', icon: 'fa-chart-line', iconColor: '#f472b6', path: '/finance/reports' },
+    employees: { id: 'employees', labelKey: 'employees', icon: 'fa-users', iconColor: '#38bdf8', path: '/human-resources/employees' },
+    payroll: { id: 'payroll', labelKey: 'payroll', icon: 'fa-money-bill-wave', iconColor: '#34d399', path: '/human-resources/payroll' },
+    company: { id: 'company', labelKey: 'company', icon: 'fa-building-user', iconColor: '#60a5fa', path: '/administrator/company' },
+    project: { id: 'project', labelKey: 'project', icon: 'fa-folder-open', iconColor: '#fbbf24', path: '/administrator/project' },
+    user: { id: 'user', labelKey: 'user', icon: 'fa-user-gear', iconColor: '#a78bfa', path: '/administrator/user' },
+    userRole: { id: 'userRole', labelKey: 'userRole', icon: 'fa-user-tag', iconColor: '#2dd4bf', path: '/administrator/user-role' },
+    customers: { id: 'customers', labelKey: 'customers', icon: 'fa-user-group', iconColor: '#38bdf8', path: '/administrator/customers' },
+    suppliers: { id: 'suppliers', labelKey: 'suppliers', icon: 'fa-building', iconColor: '#fb923c', path: '/administrator/suppliers' },
+    accessRight: { id: 'accessRight', labelKey: 'accessRight', icon: 'fa-shield-halved', iconColor: '#f87171', path: '/administrator/access-right' },
+    stickyNotes: { id: 'stickyNotes', labelKey: 'stickyNotes', icon: 'fa-note-sticky', iconColor: '#fbbf24', path: '/personalization/sticky-notes' },
+    feedback: { id: 'feedback', labelKey: 'feedback', icon: 'fa-comment-dots', iconColor: '#a78bfa', path: '/feedback' },
+  };
+
+  const favoriteItems: NavigationItem[] = favoriteIds
+    .map(id => allModulesMap[id])
+    .filter(Boolean);
 
   const navigationItems: NavigationItem[] = [
     { id: 'dashboard', labelKey: 'dashboard', icon: 'fa-chart-pie', iconColor: '#a78bfa', path: '/' },
@@ -64,6 +126,16 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
         { id: 'accessRight', labelKey: 'accessRight', icon: 'fa-shield-halved', iconColor: '#f87171', path: '/administrator/access-right' }
       ]
     },
+    {
+      id: 'personalization',
+      labelKey: 'personalization',
+      icon: 'fa-wand-magic-sparkles',
+      iconColor: '#ec4899',
+      children: [
+        { id: 'stickyNotes', labelKey: 'stickyNotes', icon: 'fa-note-sticky', iconColor: '#fbbf24', path: '/personalization/sticky-notes' },
+        { id: 'quickAccess', labelKey: 'quickAccess', icon: 'fa-star', iconColor: '#fbbf24', path: '/personalization/quick-access' }
+      ]
+    },
   ];
 
   const isActive = (path?: string) => {
@@ -99,7 +171,7 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
               isCollapsed ? 'justify-center py-3 px-2' : 'px-4 py-2.5',
               isItemActive
                 ? 'nav-item-active text-white'
-                : 'text-white/80 hover:text-white'
+                : 'text-white/90 hover:text-white'
             )}
             title={isCollapsed ? t(item.labelKey) : undefined}
           >
@@ -128,7 +200,7 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
-                className="overflow-hidden ml-4 mt-1 space-y-0.5 border-l border-white/15 pl-3"
+                className="overflow-hidden ml-4 mt-1 space-y-0.5 border-l border-white/20 pl-3"
               >
                 {item.children?.map(child => renderMenuItem(child, true))}
               </motion.ul>
@@ -147,7 +219,7 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
             isCollapsed ? 'justify-center py-3 px-2' : isChild ? 'px-3 py-2' : 'px-4 py-2.5',
             isItemActive
               ? 'nav-item-active text-white'
-              : 'text-white/80 hover:text-white'
+              : 'text-white/90 hover:text-white'
           )}
           title={isCollapsed ? t(item.labelKey) : undefined}
         >
@@ -193,7 +265,7 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
                 <h1 className="text-[15px] font-bold text-white tracking-tight">
                   {t('systemTitle')}
                 </h1>
-                <p className="text-[10px] text-white/50 font-medium tracking-widest uppercase">Enterprise</p>
+                <p className="text-[10px] text-white/60 font-medium tracking-widest uppercase">Enterprise</p>
               </div>
             </div>
           )}
@@ -217,7 +289,7 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
         <div className="px-4 mb-2">
           <button
             onClick={onToggle}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/50 hover:text-white/70 hover:bg-white/5 transition-all text-xs"
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/60 hover:text-white/80 hover:bg-white/5 transition-all text-xs"
             title={t('collapseSidebar')}
           >
             <span className="font-medium uppercase tracking-wider">{t('collapseSidebar') || 'Menu'}</span>
@@ -229,7 +301,7 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
         <div className="px-3 mb-2 flex justify-center">
           <button
             onClick={onToggle}
-            className="p-2 rounded-lg text-white/50 hover:text-white/70 hover:bg-white/5 transition-all"
+            className="p-2 rounded-lg text-white/60 hover:text-white/80 hover:bg-white/5 transition-all"
             title={t('expandSidebar')}
           >
             <i className="fa-solid fa-angles-right text-[11px]"></i>
@@ -239,19 +311,85 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-1 overflow-y-auto">
+        {/* Quick Access Favorites */}
+        {favoriteItems.length > 0 && (
+          <>
+            {!isCollapsed && (
+              <div className="px-3 pt-1 pb-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-white/55">
+                  {t('quickAccess')}
+                </span>
+              </div>
+            )}
+            <ul className="space-y-0.5">
+              {favoriteItems.map(item => renderMenuItem(item))}
+            </ul>
+            <div className={cn("my-2", isCollapsed ? "mx-1" : "mx-3")}>
+              <div className="h-px bg-white/10"></div>
+            </div>
+          </>
+        )}
         <ul className="space-y-0.5">
           {navigationItems.map(item => renderMenuItem(item))}
         </ul>
       </nav>
 
-      {/* Footer */}
-      {!isCollapsed && (
-        <div className="p-4">
-          <div className="flex items-center justify-center text-white/25">
-            <span className="text-[10px] tracking-wider">v1.0.0</span>
-          </div>
+      {/* Demo Mode Toggle */}
+      <div className={cn("p-3", isCollapsed ? "flex justify-center" : "")}>
+        <div className={cn("mx-3 mb-2", isCollapsed && "mx-0")}>
+          <div className="h-px bg-white/10"></div>
         </div>
-      )}
+        {isCollapsed ? (
+          <button
+            onClick={() => {
+              const next = !demoMode;
+              setDemoMode(next);
+              localStorage.setItem('crm-demo-mode', String(next));
+              window.location.reload();
+            }}
+            className={cn(
+              "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
+              demoMode
+                ? "bg-amber-500/20 text-amber-300"
+                : "bg-emerald-500/20 text-emerald-300"
+            )}
+            title={demoMode ? 'Demo' : 'API'}
+          >
+            <i className={cn("fa-solid text-xs", demoMode ? "fa-flask" : "fa-server")}></i>
+          </button>
+        ) : (
+          <button
+            onClick={() => {
+              const next = !demoMode;
+              setDemoMode(next);
+              localStorage.setItem('crm-demo-mode', String(next));
+              window.location.reload();
+            }}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-white/5 transition-all group"
+          >
+            <div className="flex items-center gap-2.5">
+              <i className={cn(
+                "fa-solid text-[13px]",
+                demoMode ? "fa-flask text-amber-300" : "fa-server text-emerald-300"
+              )}></i>
+              <span className="text-[12px] font-medium text-white/70 group-hover:text-white/90 transition-colors">
+                {demoMode ? t('demoMode') : t('apiMode')}
+              </span>
+            </div>
+            <div className={cn(
+              "w-8 h-[18px] rounded-full relative transition-all duration-200",
+              demoMode ? "bg-amber-500/40" : "bg-emerald-500/40"
+            )}>
+              <div className={cn(
+                "absolute top-[2px] w-[14px] h-[14px] rounded-full transition-all duration-200",
+                demoMode
+                  ? "left-[2px] bg-amber-300"
+                  : "left-[14px] bg-emerald-300"
+              )} />
+            </div>
+          </button>
+        )}
+      </div>
     </div>
   );
 }

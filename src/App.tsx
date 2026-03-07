@@ -21,6 +21,8 @@ import User from "@/pages/User";
 import UserRole from "@/pages/UserRole";
 import AccessRight from "@/pages/AccessRight";
 import Payroll from "@/pages/Payroll";
+import StickyNotes from "@/pages/StickyNotes";
+import QuickAccess from "@/pages/QuickAccess";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(true); // 默认已登录，用于演示
@@ -68,6 +70,8 @@ export default function App() {
               <Route path="administrator/user-role" element={<UserRole />} />
               <Route path="administrator/suppliers" element={<Suppliers />} />
               <Route path="administrator/access-right" element={<AccessRight />} />
+              <Route path="personalization/sticky-notes" element={<StickyNotes />} />
+              <Route path="personalization/quick-access" element={<QuickAccess />} />
               <Route path="settings" element={<Settings />} />
             </Route>
           </Routes>
