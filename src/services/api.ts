@@ -26,6 +26,19 @@ import {
   Payroll
 } from './mockData';
 
+// API基础地址 - 只需修改这里即可切换后端
+const API_BASE_URL = 'https://localhost:7215/api';
+
+// Demo模式检测 - 读取localStorage
+export const isDemoMode = (): boolean => {
+  try {
+    const val = localStorage.getItem('crm-demo-mode');
+    return val === null ? true : val === 'true'; // 默认开启Demo
+  } catch {
+    return true;
+  }
+};
+
 // 模拟API延迟
 const delay = (ms: number = 500) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -348,8 +361,34 @@ export const projectAPI = {
 // 用户API
 export const userAPI = {
   getUsers: async (): Promise<User[]> => {
-    await delay();
-    return [...mockUsers];
+    if (isDemoMode()) {
+      await delay();
+      return [...mockUsers];
+    }
+    const res = await fetch(`${API_BASE_URL}/Master/GetUser`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pFilter: '' }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const items = json.response_details || [];
+    // 建立 userID → userName 映射，用于解析 createdBy
+    const idNameMap: Record<number, string> = {};
+    for (const item of items) {
+      idNameMap[item.userID] = item.userName || '';
+    }
+    return items.map((item: any) => ({
+      id: String(item.userID),
+      username: item.userName || '',
+      email: item.userEmail || '',
+      phone: item.userHP || '',
+      effDate: item.effDate?.split('T')[0] || '',
+      expDate: item.expDate?.split('T')[0] || '',
+      status: item.isActive ? 'active' : 'inactive' as const,
+      createdBy: idNameMap[item.createdBy] || String(item.createdBy ?? ''),
+      createdAt: item.createdDate?.split('T')[0] || '',
+    }));
   },
   getUser: async (id: string): Promise<User | undefined> => {
     await delay();

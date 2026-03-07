@@ -30,22 +30,22 @@
 }
 
 /* ========== 主题颜色变量 - 亮色模式 ========== */
-/* Sapphire 宝石蓝: 靛蓝 → 青色 */
+/* Sapphire 宝石蓝: 电光靛蓝 → 明亮青色 */
 .theme-blue {
-  --primary-color: #4f46e5;
-  --primary-light: #6366f1;
-  --primary-dark: #4338ca;
-  --primary-end: #06b6d4;
-  --primary-rgb: 79, 70, 229;
-  --sidebar-from: #312e81;
-  --sidebar-via: #4f46e5;
-  --sidebar-to: #0e7490;
-  --gradient-from: #4f46e5;
-  --gradient-to: #06b6d4;
-  --thead-bg: rgba(79, 70, 229, 0.06);
-  --thead-bg-dark: rgba(79, 70, 229, 0.10);
-  --glow-color: rgba(79, 70, 229, 0.18);
-  --glow-color-strong: rgba(79, 70, 229, 0.30);
+  --primary-color: #5B5FFF;
+  --primary-light: #7B7FFF;
+  --primary-dark: #4840F0;
+  --primary-end: #00D4FF;
+  --primary-rgb: 91, 95, 255;
+  --sidebar-from: #1a1660;
+  --sidebar-via: #3D3BF3;
+  --sidebar-to: #0891b2;
+  --gradient-from: #5B5FFF;
+  --gradient-to: #00D4FF;
+  --thead-bg: rgba(91, 95, 255, 0.06);
+  --thead-bg-dark: rgba(91, 95, 255, 0.10);
+  --glow-color: rgba(91, 95, 255, 0.18);
+  --glow-color-strong: rgba(91, 95, 255, 0.30);
 }
 
 /* Violet 梦幻紫: 紫 → 粉红 */
@@ -66,72 +66,72 @@
   --glow-color-strong: rgba(124, 58, 237, 0.30);
 }
 
-/* Emerald 翡翠绿: 深绿 → 青绿 */
+/* Emerald 翡翠绿: 鲜亮翠绿 → 明亮薄荷 */
 .theme-green {
-  --primary-color: #059669;
-  --primary-light: #10b981;
-  --primary-dark: #047857;
-  --primary-end: #14b8a6;
-  --primary-rgb: 5, 150, 105;
-  --sidebar-from: #064e3b;
-  --sidebar-via: #059669;
-  --sidebar-to: #0f766e;
-  --gradient-from: #059669;
-  --gradient-to: #14b8a6;
-  --thead-bg: rgba(5, 150, 105, 0.06);
-  --thead-bg-dark: rgba(5, 150, 105, 0.10);
-  --glow-color: rgba(5, 150, 105, 0.18);
-  --glow-color-strong: rgba(5, 150, 105, 0.30);
+  --primary-color: #00C978;
+  --primary-light: #1EEAA0;
+  --primary-dark: #00A864;
+  --primary-end: #00E5C3;
+  --primary-rgb: 0, 201, 120;
+  --sidebar-from: #053B2C;
+  --sidebar-via: #0A7D52;
+  --sidebar-to: #0A7B6E;
+  --gradient-from: #00C978;
+  --gradient-to: #00E5C3;
+  --thead-bg: rgba(0, 201, 120, 0.06);
+  --thead-bg-dark: rgba(0, 201, 120, 0.10);
+  --glow-color: rgba(0, 201, 120, 0.18);
+  --glow-color-strong: rgba(0, 201, 120, 0.30);
 }
 
-/* Sunset 日落橙: 深橙 → 金黄 */
+/* Sunset 日落橙: 鲜亮橙 → 明亮金 */
 .theme-orange {
-  --primary-color: #ea580c;
-  --primary-light: #f97316;
-  --primary-dark: #c2410c;
-  --primary-end: #eab308;
-  --primary-rgb: 234, 88, 12;
-  --sidebar-from: #7c2d12;
-  --sidebar-via: #ea580c;
-  --sidebar-to: #a16207;
-  --gradient-from: #ea580c;
-  --gradient-to: #eab308;
-  --thead-bg: rgba(234, 88, 12, 0.06);
-  --thead-bg-dark: rgba(234, 88, 12, 0.10);
-  --glow-color: rgba(234, 88, 12, 0.18);
-  --glow-color-strong: rgba(234, 88, 12, 0.30);
+  --primary-color: #FF6B2C;
+  --primary-light: #FF8F5C;
+  --primary-dark: #E85A1C;
+  --primary-end: #FFB800;
+  --primary-rgb: 255, 107, 44;
+  --sidebar-from: #5C1D08;
+  --sidebar-via: #D4500A;
+  --sidebar-to: #8B6B00;
+  --gradient-from: #FF6B2C;
+  --gradient-to: #FFB800;
+  --thead-bg: rgba(255, 107, 44, 0.06);
+  --thead-bg-dark: rgba(255, 107, 44, 0.10);
+  --glow-color: rgba(255, 107, 44, 0.18);
+  --glow-color-strong: rgba(255, 107, 44, 0.30);
 }
 
-/* Cherry 樱桃红: 玫红 → 紫 */
+/* Cherry 樱桃红: 热力珊瑚 → 电光紫 */
 .theme-rose {
-  --primary-color: #e11d48;
-  --primary-light: #f43f5e;
-  --primary-dark: #be123c;
-  --primary-end: #a855f7;
-  --primary-rgb: 225, 29, 72;
-  --sidebar-from: #881337;
-  --sidebar-via: #e11d48;
-  --sidebar-to: #7e22ce;
-  --gradient-from: #e11d48;
-  --gradient-to: #a855f7;
-  --thead-bg: rgba(225, 29, 72, 0.06);
-  --thead-bg-dark: rgba(225, 29, 72, 0.10);
-  --glow-color: rgba(225, 29, 72, 0.18);
-  --glow-color-strong: rgba(225, 29, 72, 0.30);
+  --primary-color: #FF2D6F;
+  --primary-light: #FF5C8F;
+  --primary-dark: #E01858;
+  --primary-end: #C850FF;
+  --primary-rgb: 255, 45, 111;
+  --sidebar-from: #6B0D30;
+  --sidebar-via: #D91B5C;
+  --sidebar-to: #7B2FBF;
+  --gradient-from: #FF2D6F;
+  --gradient-to: #C850FF;
+  --thead-bg: rgba(255, 45, 111, 0.06);
+  --thead-bg-dark: rgba(255, 45, 111, 0.10);
+  --glow-color: rgba(255, 45, 111, 0.18);
+  --glow-color-strong: rgba(255, 45, 111, 0.30);
 }
 
 /* ========== 主题颜色变量 - 暗色模式 ========== */
 .dark.theme-blue {
-  --primary-color: #6366f1;
-  --primary-light: #818cf8;
-  --primary-dark: #4f46e5;
-  --primary-end: #06b6d4;
-  --primary-rgb: 99, 102, 241;
-  --sidebar-from: #0c0a2a;
-  --sidebar-via: #1e1b4b;
-  --sidebar-to: #083344;
-  --gradient-from: #6366f1;
-  --gradient-to: #06b6d4;
+  --primary-color: #7B7FFF;
+  --primary-light: #9B9EFF;
+  --primary-dark: #5B5FFF;
+  --primary-end: #00D4FF;
+  --primary-rgb: 123, 127, 255;
+  --sidebar-from: #0a0830;
+  --sidebar-via: #1c1a58;
+  --sidebar-to: #06303f;
+  --gradient-from: #7B7FFF;
+  --gradient-to: #00D4FF;
 }
 
 .dark.theme-purple {
@@ -148,42 +148,42 @@
 }
 
 .dark.theme-green {
-  --primary-color: #10b981;
-  --primary-light: #34d399;
-  --primary-dark: #059669;
-  --primary-end: #14b8a6;
-  --primary-rgb: 16, 185, 129;
-  --sidebar-from: #022c22;
-  --sidebar-via: #064e3b;
-  --sidebar-to: #042f2e;
-  --gradient-from: #10b981;
-  --gradient-to: #14b8a6;
+  --primary-color: #1EEAA0;
+  --primary-light: #50FFB8;
+  --primary-dark: #00C978;
+  --primary-end: #00E5C3;
+  --primary-rgb: 30, 234, 160;
+  --sidebar-from: #021F16;
+  --sidebar-via: #064E3B;
+  --sidebar-to: #04342E;
+  --gradient-from: #1EEAA0;
+  --gradient-to: #00E5C3;
 }
 
 .dark.theme-orange {
-  --primary-color: #f97316;
-  --primary-light: #fb923c;
-  --primary-dark: #ea580c;
-  --primary-end: #eab308;
-  --primary-rgb: 249, 115, 22;
-  --sidebar-from: #1c0a00;
-  --sidebar-via: #431407;
-  --sidebar-to: #422006;
-  --gradient-from: #f97316;
-  --gradient-to: #eab308;
+  --primary-color: #FF8F5C;
+  --primary-light: #FFB088;
+  --primary-dark: #FF6B2C;
+  --primary-end: #FFB800;
+  --primary-rgb: 255, 143, 92;
+  --sidebar-from: #1C0A00;
+  --sidebar-via: #4A1A06;
+  --sidebar-to: #3A2800;
+  --gradient-from: #FF8F5C;
+  --gradient-to: #FFB800;
 }
 
 .dark.theme-rose {
-  --primary-color: #f43f5e;
-  --primary-light: #fb7185;
-  --primary-dark: #e11d48;
-  --primary-end: #a855f7;
-  --primary-rgb: 244, 63, 94;
+  --primary-color: #FF5C8F;
+  --primary-light: #FF85AB;
+  --primary-dark: #FF2D6F;
+  --primary-end: #C850FF;
+  --primary-rgb: 255, 92, 143;
   --sidebar-from: #200712;
-  --sidebar-via: #4c0519;
-  --sidebar-to: #3b0764;
-  --gradient-from: #f43f5e;
-  --gradient-to: #a855f7;
+  --sidebar-via: #50081E;
+  --sidebar-to: #3B0764;
+  --gradient-from: #FF5C8F;
+  --gradient-to: #C850FF;
 }
 
 /* ========== 侧边栏渐变 ========== */
@@ -196,8 +196,15 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at top left, rgba(255,255,255,0.05) 0%, transparent 60%);
+  background: radial-gradient(ellipse at top left, rgba(255,255,255,0.03) 0%, transparent 50%);
   pointer-events: none;
+}
+
+/* 侧边栏文字清晰度增强 */
+.sidebar-gradient {
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: geometricPrecision;
 }
 
 /* ========== 毛玻璃头部 ========== */
@@ -436,8 +443,8 @@
 }
 
 .nav-item-active {
-  background: rgba(255, 255, 255, 0.15) !important;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.18) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 /* ========== 进度条动画 ========== */

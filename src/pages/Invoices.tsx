@@ -26,6 +26,7 @@ export default function Invoices() {
   const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null);
   const [focusedPriceItemId, setFocusedPriceItemId] = useState<string | null>(null);
   const [priceInput, setPriceInput] = useState('');
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -450,6 +451,23 @@ export default function Invoices() {
               <option value="overdue">{t('overdue')}</option>
             </select>
 
+            <div className="flex items-center rounded-xl border border-gray-200 dark:border-gray-700/50 overflow-hidden">
+              <button
+                className={`px-3 py-2 text-sm transition-colors ${viewMode === 'list' ? 'btn-gradient text-white' : 'bg-white dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
+                onClick={() => setViewMode('list')}
+                title={language === 'zh' ? '列表视图' : 'List View'}
+              >
+                <i className="fa-solid fa-list"></i>
+              </button>
+              <button
+                className={`px-3 py-2 text-sm transition-colors ${viewMode === 'card' ? 'btn-gradient text-white' : 'bg-white dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
+                onClick={() => setViewMode('card')}
+                title={language === 'zh' ? '卡片视图' : 'Card View'}
+              >
+                <i className="fa-solid fa-grip"></i>
+              </button>
+            </div>
+
             <button
               className="btn-gradient rounded-xl text-sm font-medium text-white px-4 py-2 flex items-center justify-center"
               onClick={() => {
@@ -468,132 +486,268 @@ export default function Invoices() {
         </div>
       </div>
 
-      {/* 发票表格 */}
-      <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800/80 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead>
-              <tr className="border-b border-gray-100 dark:border-gray-800/80">
-                <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  {t('invoiceNumber')}
-                </th>
-                <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  {t('customer')}
-                </th>
-                <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  {t('contactPerson')}
-                </th>
-                <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  {t('date')}
-                </th>
-                <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  {t('dueDate')}
-                </th>
-                <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  {t('amount')}
-                </th>
-                <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  {t('status')}
-                </th>
-                <th scope="col" className="px-6 py-3.5 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  {t('actions')}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i}>
-                    <td className="px-6 py-4"><div className="skeleton h-4 w-20 rounded" /></td>
-                    <td className="px-6 py-4"><div className="skeleton h-4 w-28 rounded" /></td>
-                    <td className="px-6 py-4"><div className="skeleton h-4 w-20 rounded" /></td>
-                    <td className="px-6 py-4"><div className="skeleton h-4 w-24 rounded" /></td>
-                    <td className="px-6 py-4"><div className="skeleton h-4 w-24 rounded" /></td>
-                    <td className="px-6 py-4"><div className="skeleton h-4 w-20 rounded" /></td>
-                    <td className="px-6 py-4"><div className="skeleton h-5 w-16 rounded-full" /></td>
-                    <td className="px-6 py-4"><div className="skeleton h-4 w-24 ml-auto rounded" /></td>
-                  </tr>
-                ))
-              ) : filteredInvoices.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-16 text-center">
-                    <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800/50 flex items-center justify-center mx-auto mb-3">
-                      <i className="fa-solid fa-file-invoice text-gray-400 dark:text-gray-500 text-lg"></i>
-                    </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('noMatchingInvoices')}</p>
-                  </td>
+      {/* 发票列表 / 卡片视图 */}
+      {viewMode === 'list' ? (
+        <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800/80 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-gray-800/80">
+                  <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                    {t('invoiceNumber')}
+                  </th>
+                  <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                    {t('customer')}
+                  </th>
+                  <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                    {t('contactPerson')}
+                  </th>
+                  <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                    {t('date')}
+                  </th>
+                  <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                    {t('dueDate')}
+                  </th>
+                  <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                    {t('amount')}
+                  </th>
+                  <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                    {t('status')}
+                  </th>
+                  <th scope="col" className="px-6 py-3.5 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                    {t('actions')}
+                  </th>
                 </tr>
-              ) : (
-                paginatedInvoices.map((invoice, index) => {
-                  const badge = getStatusBadge(invoice.status);
-                  return (
-                    <motion.tr
-                      key={invoice.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors"
-                    >
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">{invoice.invoiceNo}</span>
-                      </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">{invoice.customerName}</span>
-                      </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">{invoice.contactPerson}</span>
-                      </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">{invoice.date}</span>
-                      </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">{invoice.dueDate}</span>
-                      </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">¥{(invoice.totalAmount).toLocaleString()}</span>
-                      </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
+              </thead>
+              <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i}>
+                      <td className="px-6 py-4"><div className="skeleton h-4 w-20 rounded" /></td>
+                      <td className="px-6 py-4"><div className="skeleton h-4 w-28 rounded" /></td>
+                      <td className="px-6 py-4"><div className="skeleton h-4 w-20 rounded" /></td>
+                      <td className="px-6 py-4"><div className="skeleton h-4 w-24 rounded" /></td>
+                      <td className="px-6 py-4"><div className="skeleton h-4 w-24 rounded" /></td>
+                      <td className="px-6 py-4"><div className="skeleton h-4 w-20 rounded" /></td>
+                      <td className="px-6 py-4"><div className="skeleton h-5 w-16 rounded-full" /></td>
+                      <td className="px-6 py-4"><div className="skeleton h-4 w-24 ml-auto rounded" /></td>
+                    </tr>
+                  ))
+                ) : filteredInvoices.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-16 text-center">
+                      <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800/50 flex items-center justify-center mx-auto mb-3">
+                        <i className="fa-solid fa-file-invoice text-gray-400 dark:text-gray-500 text-lg"></i>
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('noMatchingInvoices')}</p>
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedInvoices.map((invoice, index) => {
+                    const badge = getStatusBadge(invoice.status);
+                    return (
+                      <motion.tr
+                        key={invoice.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors"
+                      >
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">{invoice.invoiceNo}</span>
+                        </td>
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{invoice.customerName}</span>
+                        </td>
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{invoice.contactPerson}</span>
+                        </td>
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          <span className="text-sm text-gray-500 dark:text-gray-400">{invoice.date}</span>
+                        </td>
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          <span className="text-sm text-gray-500 dark:text-gray-400">{invoice.dueDate}</span>
+                        </td>
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          <span className="text-sm font-semibold text-gray-900 dark:text-white">¥{(invoice.totalAmount).toLocaleString()}</span>
+                        </td>
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: badge.dot }}></span>
+                            {getStatusText(invoice.status)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 whitespace-nowrap text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                              onClick={() => {
+                                setCurrentInvoice(invoice);
+                                setIsDetailModalOpen(true);
+                              }}
+                            >
+                              <i className="fa-solid fa-eye text-sm"></i>
+                            </button>
+                            <button
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                              onClick={() => {
+                                setCurrentInvoice(invoice);
+                                setIsEditModalOpen(true);
+                              }}
+                            >
+                              <i className="fa-solid fa-pen-to-square text-sm"></i>
+                            </button>
+                            <button
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                              onClick={() => setDeleteTarget(invoice)}
+                            >
+                              <i className="fa-solid fa-trash-can text-sm"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        /* Card View */
+        <div>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800/80 p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="skeleton h-5 w-24 rounded" />
+                    <div className="skeleton h-6 w-16 rounded-full" />
+                  </div>
+                  <div className="skeleton h-4 w-32 rounded mb-3" />
+                  <div className="skeleton h-4 w-28 rounded mb-4" />
+                  <div className="skeleton h-8 w-24 rounded mb-4" />
+                  <div className="flex gap-2">
+                    <div className="skeleton h-4 w-20 rounded" />
+                    <div className="skeleton h-4 w-20 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredInvoices.length === 0 ? (
+            <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800/80 px-6 py-16 text-center">
+              <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800/50 flex items-center justify-center mx-auto mb-3">
+                <i className="fa-solid fa-file-invoice text-gray-400 dark:text-gray-500 text-lg"></i>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('noMatchingInvoices')}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {paginatedInvoices.map((invoice, index) => {
+                const badge = getStatusBadge(invoice.status);
+                const statusGradient = invoice.status === 'paid'
+                  ? 'from-emerald-500 to-teal-500'
+                  : invoice.status === 'sent'
+                  ? 'from-blue-500 to-indigo-500'
+                  : invoice.status === 'overdue'
+                  ? 'from-red-500 to-orange-500'
+                  : 'from-gray-400 to-gray-500';
+                return (
+                  <motion.div
+                    key={invoice.id}
+                    initial={{ opacity: 0, y: 20, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ delay: index * 0.06, type: 'spring', stiffness: 300, damping: 25 }}
+                    className="group relative bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800/80 overflow-hidden hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 hover:-translate-y-0.5 transition-all duration-300"
+                  >
+                    {/* Top gradient accent */}
+                    <div className={`h-1 w-full bg-gradient-to-r ${statusGradient}`} />
+
+                    <div className="p-5">
+                      {/* Header: Invoice No + Status */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${statusGradient} flex items-center justify-center shadow-sm`}>
+                            <i className="fa-solid fa-file-invoice text-white text-sm"></i>
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">{invoice.invoiceNo}</p>
+                            <p className="text-[11px] text-gray-400 dark:text-gray-500">{invoice.date}</p>
+                          </div>
+                        </div>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${badge.bg} ${badge.text}`}>
                           <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: badge.dot }}></span>
                           {getStatusText(invoice.status)}
                         </span>
-                      </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
-                            onClick={() => {
-                              setCurrentInvoice(invoice);
-                              setIsDetailModalOpen(true);
-                            }}
-                          >
-                            <i className="fa-solid fa-eye text-sm"></i>
-                          </button>
-                          <button
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                            onClick={() => {
-                              setCurrentInvoice(invoice);
-                              setIsEditModalOpen(true);
-                            }}
-                          >
-                            <i className="fa-solid fa-pen-to-square text-sm"></i>
-                          </button>
-                          <button
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                            onClick={() => setDeleteTarget(invoice)}
-                          >
-                            <i className="fa-solid fa-trash-can text-sm"></i>
-                          </button>
+                      </div>
+
+                      {/* Customer info */}
+                      <div className="mb-4 space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <i className="fa-solid fa-building text-[10px] text-gray-300 dark:text-gray-600 w-3.5 text-center"></i>
+                          <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{invoice.customerName}</span>
                         </div>
-                      </td>
-                    </motion.tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        <div className="flex items-center gap-2">
+                          <i className="fa-solid fa-user text-[10px] text-gray-300 dark:text-gray-600 w-3.5 text-center"></i>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{invoice.contactPerson}</span>
+                        </div>
+                      </div>
+
+                      {/* Amount */}
+                      <div className="mb-4 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800/50">
+                        <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{t('totalAmount')}</p>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white">¥{invoice.totalAmount.toLocaleString()}</p>
+                      </div>
+
+                      {/* Due date + Items count */}
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+                          <i className="fa-regular fa-calendar text-[10px]"></i>
+                          <span>{language === 'zh' ? '到期' : 'Due'}: {invoice.dueDate}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+                          <i className="fa-solid fa-list-ol text-[10px]"></i>
+                          <span>{invoice.items.length} {language === 'zh' ? '项' : 'items'}</span>
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-1.5 pt-3 border-t border-gray-100 dark:border-gray-800/50">
+                        <button
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
+                          onClick={() => {
+                            setCurrentInvoice(invoice);
+                            setIsDetailModalOpen(true);
+                          }}
+                        >
+                          <i className="fa-solid fa-eye text-[10px]"></i>
+                          {language === 'zh' ? '查看' : 'View'}
+                        </button>
+                        <button
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                          onClick={() => {
+                            setCurrentInvoice(invoice);
+                            setIsEditModalOpen(true);
+                          }}
+                        >
+                          <i className="fa-solid fa-pen-to-square text-[10px]"></i>
+                          {language === 'zh' ? '编辑' : 'Edit'}
+                        </button>
+                        <button
+                          className="flex items-center justify-center w-9 h-9 rounded-xl text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                          onClick={() => setDeleteTarget(invoice)}
+                        >
+                          <i className="fa-solid fa-trash-can text-[11px]"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* Pagination */}
       {!isLoading && filteredInvoices.length > 0 && (

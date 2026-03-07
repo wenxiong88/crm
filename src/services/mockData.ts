@@ -120,13 +120,10 @@ export interface User {
   avatar?: string;
   email: string;
   phone: string;
-  companyId: string;
-  companyName: string;
-  projectId: string;
-  projectName: string;
-  roleId: string;
-  roleName: string;
+  effDate: string;
+  expDate: string;
   status: 'active' | 'inactive';
+  createdBy: string;
   createdAt: string;
 }
 
@@ -379,21 +376,17 @@ export const mockUserRoles: UserRole[] = [
 
 // 模拟用户数据
 export const mockUsers: User[] = Array.from({ length: 5 }, (_, i) => {
-  const company = mockCompanies[i % mockCompanies.length];
-  const companyProjects = mockProjects.filter(p => p.companyId === company.id);
-  const project = companyProjects.length > 0 ? companyProjects[i % companyProjects.length] : mockProjects[i % mockProjects.length];
+  const effDate = new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000);
+  const expDate = new Date(effDate.getTime() + (365 + Math.random() * 730) * 24 * 60 * 60 * 1000);
   return {
     id: generateId(),
     username: `user${i + 1}`,
     email: `user${i + 1}@example.com`,
     phone: `1350013500${i}`,
-    companyId: company.id,
-    companyName: company.name,
-    projectId: project.id,
-    projectName: project.name,
-    roleId: mockUserRoles[i % mockUserRoles.length].id,
-    roleName: mockUserRoles[i % mockUserRoles.length].name,
+    effDate: effDate.toISOString().split('T')[0],
+    expDate: expDate.toISOString().split('T')[0],
     status: i % 5 === 0 ? 'inactive' : 'active',
+    createdBy: 'admin',
     createdAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   };
 });

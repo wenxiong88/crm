@@ -7,6 +7,7 @@ import { Project, Company } from '../services/mockData';
 import { toast } from 'sonner';
 import { format, parse, isValid } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import DatePicker from '../components/DatePicker';
 
 export default function Projects() {
   const { t, language } = useContext(LanguageContext);
@@ -222,22 +223,18 @@ export default function Projects() {
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           {t('startDate')}
         </label>
-        <input
-          type="date"
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
+        <DatePicker
           value={currentProject.startDate || ''}
-          onChange={(e) => setCurrentProject({ ...currentProject, startDate: e.target.value })}
+          onChange={(val) => setCurrentProject({ ...currentProject, startDate: val })}
         />
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           {t('endDate')}
         </label>
-        <input
-          type="date"
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
+        <DatePicker
           value={currentProject.endDate || ''}
-          onChange={(e) => setCurrentProject({ ...currentProject, endDate: e.target.value })}
+          onChange={(val) => setCurrentProject({ ...currentProject, endDate: val })}
         />
       </div>
       <div className="md:col-span-2">

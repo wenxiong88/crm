@@ -83,6 +83,9 @@ const translations = {
     projectCode: '项目代码',
     startDate: '开始日期',
     endDate: '结束日期',
+    effectiveDate: '生效日期',
+    expiryDate: '到期日期',
+    createdBy: '创建人',
     username: '用户名',
     roleName: '角色名称',
     permissions: '权限',
@@ -366,7 +369,36 @@ const translations = {
     joinDate: '加入日期',
     lastLogin: '上次登录',
     systemAdmin: '系统管理员',
-    close: '关闭'
+    close: '关闭',
+
+    // 个性化
+    personalization: '个性化',
+    stickyNotes: '便签',
+    manageStickyNotes: '管理你的个人便签和备忘录',
+    addNote: '添加便签',
+    editNote: '编辑便签',
+    noteTitle: '标题',
+    noteContent: '内容',
+    noteColor: '颜色',
+    noNotes: '还没有便签，点击添加开始吧',
+    noteAdded: '便签已添加',
+    noteUpdated: '便签已更新',
+    noteDeleted: '便签已删除',
+    dragToMove: '拖拽移动',
+    pinNote: '置顶',
+    unpinNote: '取消置顶',
+
+    // 模式切换
+    demoMode: 'Demo 模式',
+    apiMode: 'API 模式',
+
+    // 快捷访问
+    quickAccess: '快捷访问',
+    manageQuickAccess: '选择你常用的模块，方便快速访问',
+    quickAccessUpdated: '快捷访问已更新',
+    selectFavorites: '选择常用模块',
+    noFavorites: '还没有添加快捷访问模块',
+    quickAccessHint: '前往个性化设置添加'
   },
   en: {
     // Navigation menu
@@ -437,6 +469,9 @@ const translations = {
     projectCode: 'Project code',
     startDate: 'Start date',
     endDate: 'End date',
+    effectiveDate: 'Effective Date',
+    expiryDate: 'Expiry Date',
+    createdBy: 'Created By',
     username: 'Username',
     roleName: 'Role name',
     permissions: 'Permissions',
@@ -717,7 +752,36 @@ const translations = {
     joinDate: 'Join Date',
     lastLogin: 'Last Login',
     systemAdmin: 'System Administrator',
-    close: 'Close'
+    close: 'Close',
+
+    // Personalization
+    personalization: 'Personalization',
+    stickyNotes: 'Sticky Notes',
+    manageStickyNotes: 'Manage your personal sticky notes and memos',
+    addNote: 'Add Note',
+    editNote: 'Edit Note',
+    noteTitle: 'Title',
+    noteContent: 'Content',
+    noteColor: 'Color',
+    noNotes: 'No notes yet, click add to get started',
+    noteAdded: 'Note added',
+    noteUpdated: 'Note updated',
+    noteDeleted: 'Note deleted',
+    dragToMove: 'Drag to move',
+    pinNote: 'Pin',
+    unpinNote: 'Unpin',
+
+    // Mode toggle
+    demoMode: 'Demo Mode',
+    apiMode: 'API Mode',
+
+    // Quick Access
+    quickAccess: 'Quick Access',
+    manageQuickAccess: 'Select your frequently used modules for quick access',
+    quickAccessUpdated: 'Quick Access updated',
+    selectFavorites: 'Select favorite modules',
+    noFavorites: 'No quick access modules added yet',
+    quickAccessHint: 'Go to personalization settings to add'
   }
 };
 

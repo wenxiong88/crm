@@ -2,8 +2,8 @@ import { useState, useEffect, useContext, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LanguageContext } from '../contexts/LanguageContext';
 import { ThemeContext } from '../contexts/ThemeContext';
-import { userAPI, companyAPI, userRoleAPI, projectAPI } from '../services/api';
-import { User, Company, UserRole, Project } from '../services/mockData';
+import { userAPI } from '../services/api';
+import { User } from '../services/mockData';
 import { toast } from 'sonner';
 import { format, parse, isValid } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
@@ -21,10 +21,6 @@ export default function Users() {
   };
 
   const [users, setUsers] = useState<User[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [roles, setRoles] = useState<UserRole[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -55,9 +51,6 @@ export default function Users() {
 
   useEffect(() => {
     fetchUsers();
-    fetchCompanies();
-    fetchRoles();
-    fetchProjects();
   }, []);
 
   const fetchUsers = async () => {
@@ -70,64 +63,6 @@ export default function Users() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const fetchCompanies = async () => {
-    try {
-      const data = await companyAPI.getCompanies();
-      setCompanies(data);
-    } catch (error) {
-      console.error('Failed to fetch companies', error);
-    }
-  };
-
-  const fetchRoles = async () => {
-    try {
-      const data = await userRoleAPI.getUserRoles();
-      setRoles(data);
-    } catch (error) {
-      console.error('Failed to fetch roles', error);
-    }
-  };
-
-  const fetchProjects = async () => {
-    try {
-      const data = await projectAPI.getProjects();
-      setProjects(data);
-    } catch (error) {
-      console.error('Failed to fetch projects', error);
-    }
-  };
-
-  const handleCompanyChange = (companyId: string) => {
-    const company = companies.find(c => c.id === companyId);
-    const companyProjects = projects.filter(p => p.companyId === companyId);
-    setFilteredProjects(companyProjects);
-    setCurrentUser({
-      ...currentUser,
-      companyId,
-      companyName: company?.name || '',
-      projectId: '',
-      projectName: ''
-    });
-  };
-
-  const handleProjectChange = (projectId: string) => {
-    const project = filteredProjects.find(p => p.id === projectId);
-    setCurrentUser({
-      ...currentUser,
-      projectId,
-      projectName: project?.name || ''
-    });
-  };
-
-  const handleRoleChange = (roleId: string) => {
-    const role = roles.find(r => r.id === roleId);
-    setCurrentUser({
-      ...currentUser,
-      roleId,
-      roleName: role?.name || ''
-    });
   };
 
   const handleDelete = async () => {
@@ -202,8 +137,7 @@ export default function Users() {
 
   const filteredUsers = users.filter(user =>
     user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.companyName.toLowerCase().includes(searchTerm.toLowerCase())
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
@@ -361,49 +295,21 @@ export default function Users() {
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('selectCompany')}
+          {t('effectiveDate')}
         </label>
-        <select
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-          value={currentUser.companyId || ''}
-          onChange={(e) => handleCompanyChange(e.target.value)}
-        >
-          <option value="">{t('selectCompany')}</option>
-          {companies.map(company => (
-            <option key={company.id} value={company.id}>{company.name}</option>
-          ))}
-        </select>
+        <DatePicker
+          value={currentUser.effDate || ''}
+          onChange={(val) => setCurrentUser({ ...currentUser, effDate: val })}
+        />
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('selectProject')}
+          {t('expiryDate')}
         </label>
-        <select
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          value={currentUser.projectId || ''}
-          onChange={(e) => handleProjectChange(e.target.value)}
-          disabled={!currentUser.companyId}
-        >
-          <option value="">{t('selectProject')}</option>
-          {filteredProjects.map(project => (
-            <option key={project.id} value={project.id}>{project.name}</option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('selectRole')}
-        </label>
-        <select
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-          value={currentUser.roleId || ''}
-          onChange={(e) => handleRoleChange(e.target.value)}
-        >
-          <option value="">{t('selectRole')}</option>
-          {roles.map(role => (
-            <option key={role.id} value={role.id}>{role.name}</option>
-          ))}
-        </select>
+        <DatePicker
+          value={currentUser.expDate || ''}
+          onChange={(val) => setCurrentUser({ ...currentUser, expDate: val })}
+        />
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -433,8 +339,6 @@ export default function Users() {
 
   const openEditModal = (user: User) => {
     setCurrentUser(user);
-    const companyProjects = projects.filter(p => p.companyId === user.companyId);
-    setFilteredProjects(companyProjects);
     setIsEditModalOpen(true);
   };
 
@@ -464,7 +368,6 @@ export default function Users() {
               className="btn-gradient rounded-xl text-sm font-medium text-white px-4 py-2 flex items-center justify-center"
               onClick={() => {
                 setCurrentUser({ createdAt: new Date().toISOString().split('T')[0], status: 'active' });
-                setFilteredProjects([]);
                 setIsAddModalOpen(true);
               }}
             >
@@ -491,13 +394,10 @@ export default function Users() {
                   {t('phone')}
                 </th>
                 <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  {t('companyName')}
+                  {t('effectiveDate')}
                 </th>
                 <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  {t('projectName')}
-                </th>
-                <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  {t('roleName')}
+                  {t('expiryDate')}
                 </th>
                 <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                   {t('status')}
@@ -524,13 +424,10 @@ export default function Users() {
                       <div className="skeleton h-4 w-28 rounded" />
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="skeleton h-4 w-20 rounded" />
+                      <div className="skeleton h-4 w-24 rounded" />
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="skeleton h-4 w-20 rounded" />
-                    </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="skeleton h-4 w-20 rounded" />
+                      <div className="skeleton h-4 w-24 rounded" />
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <div className="skeleton h-5 w-14 rounded-full" />
@@ -546,7 +443,7 @@ export default function Users() {
                 ))
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center">
+                  <td colSpan={7} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center">
                       <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
                         <i className="fa-solid fa-magnifying-glass text-gray-400 dark:text-gray-500 text-lg"></i>
@@ -583,13 +480,10 @@ export default function Users() {
                       <div className="text-sm text-gray-600 dark:text-gray-400">{user.phone}</div>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="text-sm text-gray-600 dark:text-gray-400">{user.companyName}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">{formatDate(user.effDate)}</div>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="text-sm text-gray-600 dark:text-gray-400">{user.projectName}</div>
-                    </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="text-sm text-gray-600 dark:text-gray-400">{user.roleName}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">{formatDate(user.expDate)}</div>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
@@ -750,16 +644,12 @@ export default function Users() {
                         <p className="text-sm font-medium text-gray-900 dark:text-white">{currentUser.username}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('companyName')}</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentUser.companyName}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('effectiveDate')}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{formatDate(currentUser.effDate)}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('projectName')}</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentUser.projectName || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('roleName')}</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentUser.roleName}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('expiryDate')}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{formatDate(currentUser.expDate)}</p>
                       </div>
                     </div>
                   </div>
@@ -783,6 +673,10 @@ export default function Users() {
                         }`}>
                           {currentUser.status === 'active' ? t('active') : t('inactive')}
                         </span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('createdBy')}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentUser.createdBy || '-'}</p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('createDate')}</p>

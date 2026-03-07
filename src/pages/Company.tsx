@@ -7,6 +7,7 @@ import { Company } from '../services/mockData';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import DatePicker from '../components/DatePicker';
 
 export default function Companies() {
   const { t, language } = useContext(LanguageContext);
@@ -207,11 +208,9 @@ export default function Companies() {
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           {t('createDate')}
         </label>
-        <input
-          type="date"
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
+        <DatePicker
           value={currentCompany.createdAt || ''}
-          onChange={(e) => setCurrentCompany({ ...currentCompany, createdAt: e.target.value })}
+          onChange={(val) => setCurrentCompany({ ...currentCompany, createdAt: val })}
         />
       </div>
     </div>

@@ -66,11 +66,11 @@ export default function Settings() {
             </label>
             <div className="flex space-x-3">
               {([
-                { key: 'blue', from: '#4f46e5', to: '#06b6d4', label: '宝石蓝' },
+                { key: 'blue', from: '#5B5FFF', to: '#00D4FF', label: '宝石蓝' },
                 { key: 'purple', from: '#7c3aed', to: '#ec4899', label: '梦幻紫' },
-                { key: 'green', from: '#059669', to: '#14b8a6', label: '翡翠绿' },
-                { key: 'orange', from: '#ea580c', to: '#eab308', label: '日落橙' },
-                { key: 'rose', from: '#e11d48', to: '#a855f7', label: '樱桃红' },
+                { key: 'green', from: '#00C978', to: '#00E5C3', label: '翡翠绿' },
+                { key: 'orange', from: '#FF6B2C', to: '#FFB800', label: '日落橙' },
+                { key: 'rose', from: '#FF2D6F', to: '#C850FF', label: '樱桃红' },
               ] as const).map(item => (
                 <button
                   key={item.key}
