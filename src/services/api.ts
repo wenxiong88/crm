@@ -11,6 +11,7 @@ import {
   mockUserRoles,
   mockAccessRights,
   mockPayrolls,
+  mockDiscoverPosts,
   Employee,
   Customer,
   Supplier,
@@ -23,7 +24,9 @@ import {
   User,
   UserRole,
   AccessRight,
-  Payroll
+  Payroll,
+  DiscoverPost,
+  DiscoverComment
 } from './mockData';
 
 // API基础地址 - 只需修改这里即可切换后端
@@ -388,6 +391,10 @@ export const userAPI = {
       status: item.isActive ? 'active' : 'inactive' as const,
       createdBy: idNameMap[item.createdBy] || String(item.createdBy ?? ''),
       createdAt: item.createdDate?.split('T')[0] || '',
+      modifiedBy: idNameMap[item.modifiedBy] || String(item.modifiedBy ?? ''),
+      modifiedAt: item.modifiedDate?.split('T')[0] || '',
+      createdById: item.createdBy ?? 0,
+      modifiedById: item.modifiedBy ?? 0,
     }));
   },
   getUser: async (id: string): Promise<User | undefined> => {
@@ -395,31 +402,111 @@ export const userAPI = {
     return mockUsers.find(user => user.id === id);
   },
   createUser: async (user: Omit<User, 'id'>): Promise<User> => {
-    await delay();
-    const newUser = {
-      ...user,
-      id: Math.random().toString(36).substr(2, 9)
+    if (isDemoMode()) {
+      await delay();
+      const newUser = {
+        ...user,
+        id: Math.random().toString(36).substr(2, 9)
+      };
+      mockUsers.push(newUser);
+      return newUser;
+    }
+    const res = await fetch(`${API_BASE_URL}/Master/SaveUser`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userName: user.username || '',
+        userEmail: user.email || '',
+        userHP: user.phone || '',
+        effDate: user.effDate || null,
+        expDate: user.expDate || null,
+        isActive: user.status === 'active',
+        createdBy: user.createdById ?? 0,
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const saved = json.response_details || json;
+    return {
+      id: String(saved.userID ?? saved.id ?? ''),
+      username: saved.userName ?? user.username ?? '',
+      email: saved.userEmail ?? user.email ?? '',
+      phone: saved.userHP ?? user.phone ?? '',
+      effDate: (saved.effDate ?? user.effDate ?? '').split('T')[0],
+      expDate: (saved.expDate ?? user.expDate ?? '').split('T')[0],
+      status: saved.isActive !== undefined ? (saved.isActive ? 'active' : 'inactive') : (user.status || 'active'),
+      createdBy: String(saved.createdBy ?? ''),
+      createdAt: (saved.createdDate ?? '').split('T')[0] || new Date().toISOString().split('T')[0],
     };
-    mockUsers.push(newUser);
-    return newUser;
   },
   updateUser: async (id: string, user: Partial<User>): Promise<User | undefined> => {
-    await delay();
-    const index = mockUsers.findIndex(u => u.id === id);
-    if (index !== -1) {
-      mockUsers[index] = { ...mockUsers[index], ...user };
-      return mockUsers[index];
+    if (isDemoMode()) {
+      await delay();
+      const index = mockUsers.findIndex(u => u.id === id);
+      if (index !== -1) {
+        mockUsers[index] = { ...mockUsers[index], ...user };
+        return mockUsers[index];
+      }
+      return undefined;
     }
-    return undefined;
+    const payload = {
+      userID: Number(id) || 0,
+      userName: user.username || '',
+      userEmail: user.email || '',
+      userHP: user.phone || '',
+      effDate: user.effDate || null,
+      expDate: user.expDate || null,
+      isActive: user.status === 'active',
+      createdBy: user.createdById ?? 0,
+      modifiedBy: user.modifiedById ?? 0,
+    };
+    const res = await fetch(`${API_BASE_URL}/Master/UpdateUser`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (json.response_code !== undefined && json.response_code !== 0 && json.response_code !== 200) {
+      throw new Error(json.response_message || 'Update failed');
+    }
+    const saved = json.response_details || json;
+    return {
+      id: String(saved.userID ?? id),
+      username: saved.userName ?? user.username ?? '',
+      email: saved.userEmail ?? user.email ?? '',
+      phone: saved.userHP ?? user.phone ?? '',
+      effDate: (saved.effDate ?? user.effDate ?? '').split('T')[0],
+      expDate: (saved.expDate ?? user.expDate ?? '').split('T')[0],
+      status: saved.isActive !== undefined ? (saved.isActive ? 'active' : 'inactive') : (user.status || 'active'),
+      createdBy: String(saved.createdBy ?? ''),
+      createdAt: (saved.createdDate ?? user.createdAt ?? '').split('T')[0],
+    };
   },
-  deleteUser: async (id: string): Promise<boolean> => {
-    await delay();
-    const index = mockUsers.findIndex(u => u.id === id);
-    if (index !== -1) {
-      mockUsers.splice(index, 1);
-      return true;
+  deleteUser: async (id: string, modifiedById?: number): Promise<boolean> => {
+    if (isDemoMode()) {
+      await delay();
+      const index = mockUsers.findIndex(u => u.id === id);
+      if (index !== -1) {
+        mockUsers.splice(index, 1);
+        return true;
+      }
+      return false;
     }
-    return false;
+    const res = await fetch(`${API_BASE_URL}/Master/RemoveUser`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userID: Number(id) || 0,
+        modifiedBy: modifiedById ?? 0,
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (json.response_code !== undefined && json.response_code !== 0 && json.response_code !== 200) {
+      throw new Error(json.response_message || 'Delete failed');
+    }
+    return true;
   }
 };
 
@@ -537,5 +624,64 @@ export const payrollAPI = {
       return true;
     }
     return false;
+  }
+};
+
+// 发现页API
+export const discoverAPI = {
+  getPosts: async (): Promise<DiscoverPost[]> => {
+    await delay();
+    return [...mockDiscoverPosts].sort((a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  },
+  createPost: async (post: { author: string; content: string; images: string[] }): Promise<DiscoverPost> => {
+    await delay();
+    const newPost: DiscoverPost = {
+      id: Math.random().toString(36).substr(2, 9),
+      author: post.author,
+      content: post.content,
+      images: post.images,
+      likedBy: [],
+      comments: [],
+      createdAt: new Date().toISOString()
+    };
+    mockDiscoverPosts.unshift(newPost);
+    return newPost;
+  },
+  deletePost: async (id: string): Promise<boolean> => {
+    await delay();
+    const index = mockDiscoverPosts.findIndex(p => p.id === id);
+    if (index !== -1) {
+      mockDiscoverPosts.splice(index, 1);
+      return true;
+    }
+    return false;
+  },
+  toggleLike: async (postId: string, userId: string): Promise<DiscoverPost | undefined> => {
+    await delay(200);
+    const post = mockDiscoverPosts.find(p => p.id === postId);
+    if (!post) return undefined;
+    const idx = post.likedBy.indexOf(userId);
+    if (idx !== -1) {
+      post.likedBy.splice(idx, 1);
+    } else {
+      post.likedBy.push(userId);
+    }
+    return { ...post };
+  },
+  addComment: async (postId: string, comment: { author: string; content: string }): Promise<DiscoverComment | undefined> => {
+    await delay(300);
+    const post = mockDiscoverPosts.find(p => p.id === postId);
+    if (!post) return undefined;
+    const newComment: DiscoverComment = {
+      id: Math.random().toString(36).substr(2, 9),
+      postId,
+      author: comment.author,
+      content: comment.content,
+      createdAt: new Date().toISOString()
+    };
+    post.comments.push(newComment);
+    return newComment;
   }
 };

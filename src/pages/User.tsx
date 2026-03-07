@@ -67,10 +67,39 @@ export default function Users() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    const deletedName = deleteTarget.username;
     try {
-      await userAPI.deleteUser(deleteTarget.id);
-      setUsers(users.filter(u => u.id !== deleteTarget.id));
-      toast.success(t('deleteSuccess'));
+      await userAPI.deleteUser(deleteTarget.id, deleteTarget.modifiedById);
+      fetchUsers();
+      toast.custom((id) => (
+        <div
+          className="w-[360px] bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 overflow-hidden"
+          style={{ boxShadow: '0 20px 40px -12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
+        >
+          <div className="h-1 bg-gradient-to-r from-red-500 to-orange-400" />
+          <div className="p-4 flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-orange-400 flex items-center justify-center flex-shrink-0">
+              <i className="fa-solid fa-trash-can text-white text-sm" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">{language === 'zh' ? '删除成功' : 'Delete Successful'}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                {language === 'zh' ? `${deletedName} 已被成功移除` : `${deletedName} has been removed`}
+              </p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5">
+                <i className="fa-regular fa-clock mr-1" />
+                {format(new Date(), 'dd MMM yyyy HH:mm')}
+              </p>
+            </div>
+            <button
+              className="w-6 h-6 rounded-lg flex items-center justify-center text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors flex-shrink-0"
+              onClick={() => toast.dismiss(id)}
+            >
+              <i className="fa-solid fa-xmark text-xs" />
+            </button>
+          </div>
+        </div>
+      ), { duration: 4000 });
     } catch (error) {
       toast.error(t('deleteError'));
     } finally {
@@ -79,12 +108,41 @@ export default function Users() {
   };
 
   const handleAdd = async (user: Omit<User, 'id'>) => {
+    const addedName = user.username || '';
     try {
-      const newUser = await userAPI.createUser(user);
-      setUsers([...users, newUser]);
+      await userAPI.createUser(user);
       setIsAddModalOpen(false);
       setCurrentUser({});
-      toast.success(t('addSuccess'));
+      fetchUsers();
+      toast.custom((id) => (
+        <div
+          className="w-[360px] bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 overflow-hidden"
+          style={{ boxShadow: '0 20px 40px -12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
+        >
+          <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-400" />
+          <div className="p-4 flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-400 flex items-center justify-center flex-shrink-0">
+              <i className="fa-solid fa-user-plus text-white text-sm" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">{language === 'zh' ? '添加成功' : 'Add Successful'}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                {language === 'zh' ? `${addedName} 已成功添加到用户列表` : `${addedName} has been added to the user list`}
+              </p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5">
+                <i className="fa-regular fa-clock mr-1" />
+                {format(new Date(), 'dd MMM yyyy HH:mm')}
+              </p>
+            </div>
+            <button
+              className="w-6 h-6 rounded-lg flex items-center justify-center text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors flex-shrink-0"
+              onClick={() => toast.dismiss(id)}
+            >
+              <i className="fa-solid fa-xmark text-xs" />
+            </button>
+          </div>
+        </div>
+      ), { duration: 4000 });
     } catch (error) {
       toast.error(t('addError'));
     }
@@ -96,11 +154,10 @@ export default function Users() {
 
     try {
       await userAPI.updateUser(currentUser.id, user);
-      setUsers(users.map(u =>
-        u.id === currentUser.id ? { ...u, ...user } : u
-      ));
       setIsEditModalOpen(false);
       setCurrentUser({});
+      // API模式下重新拉取列表，确保数据正确
+      fetchUsers();
       toast.custom((id) => (
         <div
           className="w-[360px] bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 overflow-hidden"
@@ -254,84 +311,81 @@ export default function Users() {
       </div>
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('username')} <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          className={`w-full px-3 py-2 border rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm ${nameError && !currentUser.username?.trim() ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 dark:border-gray-700/50'}`}
-          value={currentUser.username || ''}
-          onChange={(e) => {
-            setCurrentUser({ ...currentUser, username: e.target.value });
-            if (e.target.value.trim()) setNameError(false);
-          }}
-        />
-        {nameError && !currentUser.username?.trim() && (
-          <p className="mt-1 text-xs text-red-500">{t('nameRequired')}</p>
-        )}
+      {/* Left column: User Name, Email, Phone */}
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('username')} <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            className={`w-full px-3 py-2 border rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm ${nameError && !currentUser.username?.trim() ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 dark:border-gray-700/50'}`}
+            value={currentUser.username || ''}
+            onChange={(e) => {
+              setCurrentUser({ ...currentUser, username: e.target.value });
+              if (e.target.value.trim()) setNameError(false);
+            }}
+          />
+          {nameError && !currentUser.username?.trim() && (
+            <p className="mt-1 text-xs text-red-500">{t('nameRequired')}</p>
+          )}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('email')}
+          </label>
+          <input
+            type="email"
+            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
+            value={currentUser.email || ''}
+            onChange={(e) => setCurrentUser({ ...currentUser, email: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('phone')}
+          </label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
+            value={currentUser.phone || ''}
+            onChange={(e) => setCurrentUser({ ...currentUser, phone: e.target.value })}
+          />
+        </div>
       </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('email')}
-        </label>
-        <input
-          type="email"
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-          value={currentUser.email || ''}
-          onChange={(e) => setCurrentUser({ ...currentUser, email: e.target.value })}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('phone')}
-        </label>
-        <input
-          type="text"
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-          value={currentUser.phone || ''}
-          onChange={(e) => setCurrentUser({ ...currentUser, phone: e.target.value })}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('effectiveDate')}
-        </label>
-        <DatePicker
-          value={currentUser.effDate || ''}
-          onChange={(val) => setCurrentUser({ ...currentUser, effDate: val })}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('expiryDate')}
-        </label>
-        <DatePicker
-          value={currentUser.expDate || ''}
-          onChange={(val) => setCurrentUser({ ...currentUser, expDate: val })}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('status')}
-        </label>
-        <select
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-          value={currentUser.status || 'active'}
-          onChange={(e) => setCurrentUser({ ...currentUser, status: e.target.value as 'active' | 'inactive' })}
-        >
-          <option value="active">{t('active')}</option>
-          <option value="inactive">{t('inactive')}</option>
-        </select>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('createDate')}
-        </label>
-        <DatePicker
-          value={currentUser.createdAt || ''}
-          onChange={(val) => setCurrentUser({ ...currentUser, createdAt: val })}
-        />
+      {/* Right column: Effective Date, Expiry Date, Status */}
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('effectiveDate')}
+          </label>
+          <DatePicker
+            value={currentUser.effDate || ''}
+            onChange={(val) => setCurrentUser({ ...currentUser, effDate: val })}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('expiryDate')}
+          </label>
+          <DatePicker
+            value={currentUser.expDate || ''}
+            onChange={(val) => setCurrentUser({ ...currentUser, expDate: val })}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('status')}
+          </label>
+          <select
+            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
+            value={currentUser.status || 'active'}
+            onChange={(e) => setCurrentUser({ ...currentUser, status: e.target.value as 'active' | 'inactive' })}
+          >
+            <option value="active">{t('active')}</option>
+            <option value="inactive">{t('inactive')}</option>
+          </select>
+        </div>
       </div>
     </div>
     </div>
@@ -367,7 +421,15 @@ export default function Users() {
             <button
               className="btn-gradient rounded-xl text-sm font-medium text-white px-4 py-2 flex items-center justify-center"
               onClick={() => {
-                setCurrentUser({ createdAt: new Date().toISOString().split('T')[0], status: 'active' });
+                const today = new Date();
+                const pad = (n: number) => String(n).padStart(2, '0');
+                const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+                const expStr = `${today.getFullYear() + 1}-12-31`;
+                setCurrentUser({
+                  status: 'active',
+                  effDate: todayStr,
+                  expDate: expStr,
+                });
                 setIsAddModalOpen(true);
               }}
             >
@@ -636,6 +698,7 @@ export default function Users() {
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left column: Username, Email, Phone, Created By, Created Date */}
                   <div className="rounded-xl bg-gray-50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800/50 p-5">
                     <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">{t('basicInfo')}</h4>
                     <div className="space-y-3">
@@ -644,25 +707,34 @@ export default function Users() {
                         <p className="text-sm font-medium text-gray-900 dark:text-white">{currentUser.username}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('effectiveDate')}</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{formatDate(currentUser.effDate)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('expiryDate')}</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{formatDate(currentUser.expDate)}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800/50 p-5">
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">{t('contactInfo')}</h4>
-                    <div className="space-y-3">
-                      <div>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('email')}</p>
                         <p className="text-sm text-gray-700 dark:text-gray-300">{currentUser.email}</p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('phone')}</p>
                         <p className="text-sm text-gray-700 dark:text-gray-300">{currentUser.phone}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('createdBy')}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentUser.createdBy || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('createDate')}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{formatDate(currentUser.createdAt)}</p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Right column: Effective Date, Expiry Date, Status, Modified By, Modified Date */}
+                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800/50 p-5">
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">{t('contactInfo')}</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('effectiveDate')}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{formatDate(currentUser.effDate)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('expiryDate')}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{formatDate(currentUser.expDate)}</p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('status')}</p>
@@ -675,12 +747,12 @@ export default function Users() {
                         </span>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('createdBy')}</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentUser.createdBy || '-'}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('modifiedBy')}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentUser.modifiedBy || '-'}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('createDate')}</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{formatDate(currentUser.createdAt)}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('modifiedDate')}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{formatDate(currentUser.modifiedAt)}</p>
                       </div>
                     </div>
                   </div>

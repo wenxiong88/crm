@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { useContext, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -6,13 +6,14 @@ import {
 } from 'recharts';
 import { LanguageContext } from '../contexts/LanguageContext';
 import { ThemeContext } from '../contexts/ThemeContext';
-import { dashboardData } from '../services/mockData';
+import { dashboardData, getDailyQuote } from '../services/mockData';
 
 export default function Dashboard() {
   const { t } = useContext(LanguageContext);
   const { themeColor, themeMode } = useContext(ThemeContext);
 
   const isDark = themeMode === 'dark';
+  const dailyQuote = useMemo(() => getDailyQuote('admin'), []);
 
   const themeColorMap: Record<string, { primary: string; secondary: string; border: string; gradient: [string, string] }> = {
     blue: { primary: '#6366f1', secondary: '#3b82f6', border: '#818cf8', gradient: ['#6366f1', '#3b82f6'] },
@@ -88,6 +89,68 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('dashboard')}</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('overview')}</p>
       </div>
+
+      {/* Daily Quote Marquee */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+        className="relative overflow-hidden rounded-xl border border-gray-100 dark:border-gray-800/80"
+        style={{
+          background: isDark
+            ? `linear-gradient(135deg, ${colors.primary}20, ${colors.secondary}15)`
+            : `linear-gradient(135deg, ${colors.primary}12, ${colors.secondary}08)`,
+        }}
+      >
+        <div className="flex items-center px-4 py-3 gap-3">
+          <div
+            className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ backgroundColor: `${primaryColor}20` }}
+          >
+            <i className="fa-solid fa-quote-left text-xs" style={{ color: primaryColor }}></i>
+          </div>
+          <span className="flex-shrink-0 text-xs font-medium text-gray-500 dark:text-gray-400">
+            {t('dailyQuote')}
+          </span>
+          <div className="flex-1 overflow-hidden">
+            <div className="marquee-container group">
+              <div className="marquee-content">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                  {dailyQuote.text}
+                </span>
+                <span className="text-xs text-gray-400 dark:text-gray-500 ml-3 whitespace-nowrap">
+                  —— {dailyQuote.author}
+                </span>
+                <span className="inline-block w-24"></span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                  {dailyQuote.text}
+                </span>
+                <span className="text-xs text-gray-400 dark:text-gray-500 ml-3 whitespace-nowrap">
+                  —— {dailyQuote.author}
+                </span>
+                <span className="inline-block w-24"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <style>{`
+          .marquee-container {
+            overflow: hidden;
+          }
+          .marquee-content {
+            display: inline-flex;
+            align-items: center;
+            animation: marquee 20s linear infinite;
+          }
+          .marquee-container:hover .marquee-content {
+            animation-play-state: paused;
+          }
+          @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+          }
+        `}</style>
+      </motion.div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">

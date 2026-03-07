@@ -82,6 +82,11 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
     accessRight: { id: 'accessRight', labelKey: 'accessRight', icon: 'fa-shield-halved', iconColor: '#f87171', path: '/administrator/access-right' },
     stickyNotes: { id: 'stickyNotes', labelKey: 'stickyNotes', icon: 'fa-note-sticky', iconColor: '#fbbf24', path: '/personalization/sticky-notes' },
     feedback: { id: 'feedback', labelKey: 'feedback', icon: 'fa-comment-dots', iconColor: '#a78bfa', path: '/feedback' },
+    discover: { id: 'discover', labelKey: 'discover', icon: 'fa-compass', iconColor: '#fb923c', path: '/discover' },
+    loginLog: { id: 'loginLog', labelKey: 'loginLog', icon: 'fa-right-to-bracket', iconColor: '#38bdf8', path: '/system-logs/login-log' },
+    auditLog: { id: 'auditLog', labelKey: 'auditLog', icon: 'fa-clipboard-check', iconColor: '#a78bfa', path: '/system-logs/audit-log' },
+    dataLog: { id: 'dataLog', labelKey: 'dataLog', icon: 'fa-database', iconColor: '#34d399', path: '/system-logs/data-log' },
+    errorLog: { id: 'errorLog', labelKey: 'errorLog', icon: 'fa-triangle-exclamation', iconColor: '#f87171', path: '/system-logs/error-log' },
   };
 
   const favoriteItems: NavigationItem[] = favoriteIds
@@ -90,6 +95,7 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
 
   const navigationItems: NavigationItem[] = [
     { id: 'dashboard', labelKey: 'dashboard', icon: 'fa-chart-pie', iconColor: '#a78bfa', path: '/' },
+    { id: 'discover', labelKey: 'discover', icon: 'fa-compass', iconColor: '#fb923c', path: '/discover' },
     {
       id: 'finance',
       labelKey: 'finance',
@@ -124,6 +130,18 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
         { id: 'customers', labelKey: 'customers', icon: 'fa-user-group', iconColor: '#38bdf8', path: '/administrator/customers' },
         { id: 'suppliers', labelKey: 'suppliers', icon: 'fa-building', iconColor: '#fb923c', path: '/administrator/suppliers' },
         { id: 'accessRight', labelKey: 'accessRight', icon: 'fa-shield-halved', iconColor: '#f87171', path: '/administrator/access-right' }
+      ]
+    },
+    {
+      id: 'systemLogs',
+      labelKey: 'systemLogs',
+      icon: 'fa-clock-rotate-left',
+      iconColor: '#94a3b8',
+      children: [
+        { id: 'loginLog', labelKey: 'loginLog', icon: 'fa-right-to-bracket', iconColor: '#38bdf8', path: '/system-logs/login-log' },
+        { id: 'auditLog', labelKey: 'auditLog', icon: 'fa-clipboard-check', iconColor: '#a78bfa', path: '/system-logs/audit-log' },
+        { id: 'dataLog', labelKey: 'dataLog', icon: 'fa-database', iconColor: '#34d399', path: '/system-logs/data-log' },
+        { id: 'errorLog', labelKey: 'errorLog', icon: 'fa-triangle-exclamation', iconColor: '#f87171', path: '/system-logs/error-log' },
       ]
     },
     {

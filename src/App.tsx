@@ -23,6 +23,11 @@ import AccessRight from "@/pages/AccessRight";
 import Payroll from "@/pages/Payroll";
 import StickyNotes from "@/pages/StickyNotes";
 import QuickAccess from "@/pages/QuickAccess";
+import Discover from "@/pages/Discover";
+import LoginLog from "@/pages/LoginLog";
+import AuditLog from "@/pages/AuditLog";
+import DataLog from "@/pages/DataLog";
+import ErrorLog from "@/pages/ErrorLog";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(true); // 默认已登录，用于演示
@@ -72,6 +77,11 @@ export default function App() {
               <Route path="administrator/access-right" element={<AccessRight />} />
               <Route path="personalization/sticky-notes" element={<StickyNotes />} />
               <Route path="personalization/quick-access" element={<QuickAccess />} />
+              <Route path="discover" element={<Discover />} />
+              <Route path="system-logs/login-log" element={<LoginLog />} />
+              <Route path="system-logs/audit-log" element={<AuditLog />} />
+              <Route path="system-logs/data-log" element={<DataLog />} />
+              <Route path="system-logs/error-log" element={<ErrorLog />} />
               <Route path="settings" element={<Settings />} />
             </Route>
           </Routes>
