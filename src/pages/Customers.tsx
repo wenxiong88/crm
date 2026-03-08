@@ -7,12 +7,30 @@ import { Customer } from '../services/mockData';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
-const COUNTRY_OPTIONS = [
-  'Singapore', 'Malaysia', 'China', 'Japan', 'Australia',
-  'Indonesia', 'Thailand', 'Vietnam', 'Philippines', 'South Korea',
-  'India', 'Hong Kong', 'Taiwan', 'United States', 'United Kingdom',
-  'Germany', 'France', 'Canada', 'New Zealand', 'Myanmar',
+const COUNTRY_OPTIONS: { name: string; flag: string }[] = [
+  { name: 'Singapore', flag: '🇸🇬' },
+  { name: 'Malaysia', flag: '🇲🇾' },
+  { name: 'China', flag: '🇨🇳' },
+  { name: 'Japan', flag: '🇯🇵' },
+  { name: 'Australia', flag: '🇦🇺' },
+  { name: 'Indonesia', flag: '🇮🇩' },
+  { name: 'Thailand', flag: '🇹🇭' },
+  { name: 'Vietnam', flag: '🇻🇳' },
+  { name: 'Philippines', flag: '🇵🇭' },
+  { name: 'South Korea', flag: '🇰🇷' },
+  { name: 'India', flag: '🇮🇳' },
+  { name: 'Hong Kong', flag: '🇭🇰' },
+  { name: 'Taiwan', flag: '🇹🇼' },
+  { name: 'United States', flag: '🇺🇸' },
+  { name: 'United Kingdom', flag: '🇬🇧' },
+  { name: 'Germany', flag: '🇩🇪' },
+  { name: 'France', flag: '🇫🇷' },
+  { name: 'Canada', flag: '🇨🇦' },
+  { name: 'New Zealand', flag: '🇳🇿' },
+  { name: 'Myanmar', flag: '🇲🇲' },
 ];
+
+const getCountryFlag = (name: string) => COUNTRY_OPTIONS.find(c => c.name === name)?.flag || '🌐';
 
 function CountrySelect({ value, onChange, placeholder }: {
   value: string;
@@ -25,7 +43,7 @@ function CountrySelect({ value, onChange, placeholder }: {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const filtered = COUNTRY_OPTIONS.filter(c =>
-    c.toLowerCase().includes(search.toLowerCase())
+    c.name.toLowerCase().includes(search.toLowerCase())
   );
 
   useEffect(() => {
@@ -44,13 +62,14 @@ function CountrySelect({ value, onChange, placeholder }: {
       <button
         type="button"
         onClick={() => { setOpen(!open); setTimeout(() => inputRef.current?.focus(), 50); }}
-        className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-sm border rounded-lg transition-all cursor-pointer ${
+        className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-sm border rounded-xl transition-all cursor-pointer ${
           open
             ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30'
             : 'border-gray-200 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600'
         } bg-white dark:bg-gray-900/50`}
       >
-        <span className={value ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}>
+        <span className={`flex items-center gap-2 ${value ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
+          {value && <span className="text-base leading-none">{getCountryFlag(value)}</span>}
           {value || placeholder || 'Select...'}
         </span>
         <i className={`fa-solid fa-chevron-down text-[10px] text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}></i>
@@ -86,24 +105,108 @@ function CountrySelect({ value, onChange, placeholder }: {
                 <div className="px-3 py-4 text-center text-sm text-gray-400 dark:text-gray-500">No results</div>
               ) : (
                 filtered.map(c => {
-                  const isSelected = c === value;
+                  const isSelected = c.name === value;
                   return (
                     <button
-                      key={c}
+                      key={c.name}
                       type="button"
-                      onClick={() => { onChange(c); setOpen(false); setSearch(''); }}
+                      onClick={() => { onChange(c.name); setOpen(false); setSearch(''); }}
                       className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${
                         isSelected
                           ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
                           : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/40'
                       }`}
                     >
-                      <span>{c}</span>
+                      <span className="flex items-center gap-2.5">
+                        <span className="text-base leading-none">{c.flag}</span>
+                        <span>{c.name}</span>
+                      </span>
                       {isSelected && <i className="fa-solid fa-check text-[10px] text-blue-500"></i>}
                     </button>
                   );
                 })
               )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function StatusSelect({ value, onChange, t }: {
+  value: string;
+  onChange: (v: 'active' | 'inactive') => void;
+  t: (key: string) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const options = [
+    { key: 'active' as const, label: t('active'), dot: '#10b981', bg: 'bg-emerald-500' },
+    { key: 'inactive' as const, label: t('inactive'), dot: '#9ca3af', bg: 'bg-gray-400' },
+  ];
+  const current = options.find(o => o.key === value) || options[0];
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-sm border rounded-xl transition-all cursor-pointer ${
+          open
+            ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30'
+            : 'border-gray-200 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600'
+        } bg-white dark:bg-gray-900/50`}
+      >
+        <span className="flex items-center gap-2 text-gray-900 dark:text-white">
+          <span className="relative flex h-2 w-2">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${current.bg}`} style={{ animationDuration: '2s' }}></span>
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${current.bg}`}></span>
+          </span>
+          {current.label}
+        </span>
+        <i className={`fa-solid fa-chevron-down text-[10px] text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}></i>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.98 }}
+            transition={{ duration: 0.15 }}
+            className="absolute z-50 top-full mt-1.5 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700/50 rounded-xl shadow-xl shadow-black/10 dark:shadow-black/30 overflow-hidden"
+          >
+            <div className="py-1">
+              {options.map(opt => {
+                const isSelected = value === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => { onChange(opt.key); setOpen(false); }}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
+                      isSelected
+                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/40'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: opt.dot }}></span>
+                      <span>{opt.label}</span>
+                    </span>
+                    {isSelected && <i className="fa-solid fa-check text-[10px] text-blue-500"></i>}
+                  </button>
+                );
+              })}
             </div>
           </motion.div>
         )}
@@ -126,9 +229,20 @@ export default function Customers() {
   const [pageSize, setPageSize] = useState(5);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [filterDdlOpen, setFilterDdlOpen] = useState(false);
+  const filterDdlRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchCustomers();
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (filterDdlRef.current && !filterDdlRef.current.contains(e.target as Node)) setFilterDdlOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   const fetchCustomers = async () => {
@@ -148,12 +262,15 @@ export default function Customers() {
     const delName = deleteTarget.name;
     try {
       await customerAPI.deleteCustomer(deleteTarget.id);
-      setCustomers(customers.filter(cus => cus.id !== deleteTarget.id));
+      // Refresh list from API after delete
+      const refreshed = await customerAPI.getCustomers();
+      setCustomers(refreshed);
       showSuccessToast(
         language === 'zh' ? '删除成功' : 'Deleted Successfully',
         language === 'zh' ? `${delName} 已被删除` : `${delName} has been deleted`
       );
     } catch (error) {
+      console.error('[Customer] Delete failed:', error);
       toast.error(language === 'zh' ? '删除客户失败' : 'Failed to delete customer');
     } finally {
       setDeleteTarget(null);
@@ -191,17 +308,20 @@ export default function Customers() {
   };
 
   const handleAdd = async (customer: Omit<Customer, 'id'>) => {
+    const cusName = customer.name || '';
     try {
-      const newCustomer = await customerAPI.createCustomer(customer);
-      setCustomers([...customers, newCustomer]);
+      await customerAPI.createCustomer(customer);
+      // Refresh list from API after save
+      const refreshed = await customerAPI.getCustomers();
+      setCustomers(refreshed);
       setIsAddModalOpen(false);
-      const cusName = currentCustomer.name || '';
       setCurrentCustomer({});
       showSuccessToast(
         language === 'zh' ? '添加成功' : 'Added Successfully',
         language === 'zh' ? `${cusName} 已成功添加` : `${cusName} has been added`
       );
     } catch (error) {
+      console.error('[Customer] Save failed:', error);
       toast.error(language === 'zh' ? '添加客户失败' : 'Failed to add customer');
     }
   };
@@ -211,9 +331,9 @@ export default function Customers() {
     const cusName = currentCustomer.name || '';
     try {
       await customerAPI.updateCustomer(currentCustomer.id, customer);
-      setCustomers(customers.map(cus =>
-        cus.id === currentCustomer.id ? { ...cus, ...customer } : cus
-      ));
+      // Refresh list from API after update
+      const refreshed = await customerAPI.getCustomers();
+      setCustomers(refreshed);
       setIsEditModalOpen(false);
       setCurrentCustomer({});
       showSuccessToast(
@@ -221,17 +341,21 @@ export default function Customers() {
         language === 'zh' ? `${cusName} 的信息已成功更新` : `${cusName}'s info has been updated`
       );
     } catch (error) {
+      console.error('[Customer] Update failed:', error);
       toast.error(language === 'zh' ? '更新客户信息失败' : 'Failed to update customer');
     }
   };
 
-  const filteredCustomers = customers.filter(cus =>
-    cus.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cus.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cus.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cus.street.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cus.country.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCustomers = customers.filter(cus => {
+    const matchesSearch =
+      cus.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cus.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cus.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cus.street.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cus.country.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || cus.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
@@ -263,13 +387,25 @@ export default function Customers() {
     field?: keyof Customer;
   }) => (
     <div className="min-w-0">
-      <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{label}</p>
+      <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1 whitespace-nowrap">{label}</p>
       {editable && field ? (
         field === 'country' ? (
-          <CountrySelect
+          <select
+            className="w-full px-3 py-1.5 border border-gray-200 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white text-sm transition-all cursor-pointer focus:border-blue-400 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30 focus:outline-none appearance-none"
+            style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 20 20\' fill=\'%239ca3af\'%3E%3Cpath fill-rule=\'evenodd\' d=\'M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z\' clip-rule=\'evenodd\'/%3E%3C/svg%3E")', backgroundPosition: 'right 0.5rem center', backgroundSize: '1.25em', backgroundRepeat: 'no-repeat', paddingRight: '2rem' }}
             value={(currentCustomer.country as string) || ''}
-            onChange={(v) => setCurrentCustomer({ ...currentCustomer, country: v })}
-            placeholder={`${t('search')}...`}
+            onChange={(e) => setCurrentCustomer({ ...currentCustomer, country: e.target.value })}
+          >
+            <option value="">{language === 'zh' ? '请选择国家' : 'Select Country'}</option>
+            {COUNTRY_OPTIONS.map(c => (
+              <option key={c.name} value={c.name}>{c.name}</option>
+            ))}
+          </select>
+        ) : field === 'status' ? (
+          <StatusSelect
+            value={(currentCustomer.status as string) || 'active'}
+            onChange={(v) => setCurrentCustomer({ ...currentCustomer, status: v })}
+            t={t}
           />
         ) : (
           <input
@@ -280,7 +416,18 @@ export default function Customers() {
           />
         )
       ) : (
-        <p className="text-sm text-gray-800 dark:text-gray-200 truncate">{value || '-'}</p>
+        field === 'status' ? (
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-lg ${
+            value === 'active'
+              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+              : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${value === 'active' ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
+            {value === 'active' ? t('active') : t('inactive')}
+          </span>
+        ) : (
+          <p className="text-sm text-gray-800 dark:text-gray-200 truncate">{value || '-'}</p>
+        )
       )}
     </div>
   );
@@ -325,6 +472,7 @@ export default function Customers() {
           <DetailField label={t('contactPerson')} value={currentCustomer.contactPerson} editable={editable} field="contactPerson" />
           <DetailField label={t('email')} value={currentCustomer.email} editable={editable} field="email" />
           <DetailField label={t('phone')} value={currentCustomer.phone} editable={editable} field="phone" />
+          <DetailField label={t('status')} value={currentCustomer.status} editable={editable} field="status" />
         </div>
 
         {/* Address Card */}
@@ -341,11 +489,9 @@ export default function Customers() {
           </div>
           <DetailField label={t('street')} value={currentCustomer.street} editable={editable} field="street" />
           <DetailField label={t('building')} value={currentCustomer.building} editable={editable} field="building" />
-          <div className="grid grid-cols-5 gap-4">
+          <div className="grid grid-cols-3 gap-4">
+            <DetailField label={t('postalCode')} value={currentCustomer.postalCode} editable={editable} field="postalCode" />
             <div className="col-span-2">
-              <DetailField label={t('postalCode')} value={currentCustomer.postalCode} editable={editable} field="postalCode" />
-            </div>
-            <div className="col-span-3">
               <DetailField label={t('country')} value={currentCustomer.country} editable={editable} field="country" />
             </div>
           </div>
@@ -376,9 +522,68 @@ export default function Customers() {
               <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
             </div>
 
+            <div ref={filterDdlRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setFilterDdlOpen(!filterDdlOpen)}
+                className={`flex items-center justify-between gap-2 px-4 py-2 text-sm border rounded-xl transition-all cursor-pointer min-w-[140px] ${
+                  filterDdlOpen
+                    ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30'
+                    : 'border-gray-200 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600'
+                } bg-white dark:bg-gray-900/50`}
+              >
+                <span className="flex items-center gap-2 text-gray-900 dark:text-white">
+                  {statusFilter !== 'all' && (
+                    <span className={`w-2 h-2 rounded-full ${statusFilter === 'active' ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
+                  )}
+                  {statusFilter === 'all' ? t('allStatus') : statusFilter === 'active' ? t('active') : t('inactive')}
+                </span>
+                <i className={`fa-solid fa-chevron-down text-[10px] text-gray-400 transition-transform duration-200 ${filterDdlOpen ? 'rotate-180' : ''}`}></i>
+              </button>
+              <AnimatePresence>
+                {filterDdlOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute z-50 top-full mt-1.5 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700/50 rounded-xl shadow-xl shadow-black/10 dark:shadow-black/30 overflow-hidden"
+                  >
+                    <div className="py-1">
+                      {([
+                        { key: 'all', label: t('allStatus'), dot: null },
+                        { key: 'active', label: t('active'), dot: '#10b981' },
+                        { key: 'inactive', label: t('inactive'), dot: '#9ca3af' },
+                      ] as const).map(opt => {
+                        const isSelected = statusFilter === opt.key;
+                        return (
+                          <button
+                            key={opt.key}
+                            type="button"
+                            onClick={() => { setStatusFilter(opt.key); setFilterDdlOpen(false); setCurrentPage(1); }}
+                            className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
+                              isSelected
+                                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/40'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2.5">
+                              {opt.dot && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: opt.dot }}></span>}
+                              <span>{opt.label}</span>
+                            </span>
+                            {isSelected && <i className="fa-solid fa-check text-[10px] text-blue-500"></i>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             <button
               className="btn-gradient rounded-xl text-sm font-medium text-white px-4 py-2 flex items-center justify-center"
-              onClick={() => setIsAddModalOpen(true)}
+              onClick={() => { setCurrentCustomer({ country: 'Singapore', status: 'active' }); setIsAddModalOpen(true); }}
             >
               <i className="fa-solid fa-plus mr-2"></i>
               {t('add')}
@@ -408,6 +613,9 @@ export default function Customers() {
                 <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                   {t('country')}
                 </th>
+                <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                  {t('status')}
+                </th>
                 <th scope="col" className="px-4 py-2.5 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                   {t('actions')}
                 </th>
@@ -435,6 +643,9 @@ export default function Customers() {
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <div className="skeleton h-4 w-20 rounded" />
                     </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <div className="skeleton h-6 w-16 rounded-lg" />
+                    </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-right">
                       <div className="flex items-center justify-end gap-2">
                         <div className="skeleton w-8 h-8 rounded-lg" />
@@ -446,7 +657,7 @@ export default function Customers() {
                 ))
               ) : filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center">
+                  <td colSpan={7} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center">
                       <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
                         <i className="fa-solid fa-magnifying-glass text-gray-400 dark:text-gray-500 text-lg"></i>
@@ -485,6 +696,16 @@ export default function Customers() {
                       <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100/80 dark:bg-gray-800/60 px-2.5 py-1 rounded-full">
                         <i className="fa-solid fa-location-dot text-[9px] text-gray-400 dark:text-gray-500"></i>
                         {customer.country}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-lg ${
+                        customer.status === 'active'
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${customer.status === 'active' ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
+                        {customer.status === 'active' ? t('active') : t('inactive')}
                       </span>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-right">

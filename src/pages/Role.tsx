@@ -2,12 +2,10 @@ import { useState, useEffect, useContext, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LanguageContext } from '../contexts/LanguageContext';
 import { ThemeContext } from '../contexts/ThemeContext';
-import { companyAPI, countryAPI, CountryOption } from '../services/api';
-import { Company } from '../services/mockData';
+import { userRoleAPI } from '../services/api';
+import { UserRole } from '../services/mockData';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
-import DatePicker from '../components/DatePicker';
 
 
 function StatusSelect({ value, onChange, t }: {
@@ -91,19 +89,24 @@ function StatusSelect({ value, onChange, t }: {
   );
 }
 
-function DetailField({ label, value, editable, field, required, hasError, currentCompany, setCurrentCompany, validationErrors, setValidationErrors, countryOptions, language, t }: {
+interface RoleItem {
+  id: string;
+  code: string;
+  name: string;
+  status: string;
+}
+
+function DetailField({ label, value, editable, field, required, hasError, currentRole, setCurrentRole, validationErrors, setValidationErrors, t }: {
   label: string;
   value: string | undefined;
   editable?: boolean;
-  field?: keyof Company;
+  field?: keyof RoleItem;
   required?: boolean;
   hasError: (f: string) => boolean;
-  currentCompany: Partial<Company>;
-  setCurrentCompany: (c: Partial<Company>) => void;
+  currentRole: Partial<RoleItem>;
+  setCurrentRole: (c: Partial<RoleItem>) => void;
   validationErrors: Record<string, string>;
   setValidationErrors: (e: Record<string, string>) => void;
-  countryOptions: CountryOption[];
-  language: string;
   t: (key: string) => string;
 }) {
   const clearError = (f: string) => {
@@ -119,38 +122,16 @@ function DetailField({ label, value, editable, field, required, hasError, curren
       {editable && field ? (
         field === 'status' ? (
           <StatusSelect
-            value={(currentCompany.status as string) || 'active'}
-            onChange={(v) => { setCurrentCompany({ ...currentCompany, status: v }); clearError('status'); }}
+            value={(currentRole.status as string) || 'active'}
+            onChange={(v) => { setCurrentRole({ ...currentRole, status: v }); clearError('status'); }}
             t={t}
-          />
-        ) : field === 'country' ? (
-          <select
-            className={`w-full px-3 py-1.5 border ${hasError('country') ? 'border-red-400 dark:border-red-500 ring-1 ring-red-100 dark:ring-red-900/30' : 'border-gray-200 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600'} rounded-xl bg-white dark:bg-gray-900/50 dark:text-white text-sm transition-all cursor-pointer focus:border-blue-400 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30 focus:outline-none appearance-none`}
-            style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 20 20\' fill=\'%239ca3af\'%3E%3Cpath fill-rule=\'evenodd\' d=\'M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z\' clip-rule=\'evenodd\'/%3E%3C/svg%3E")', backgroundPosition: 'right 0.5rem center', backgroundSize: '1.25em', backgroundRepeat: 'no-repeat', paddingRight: '2rem' }}
-            value={currentCompany.countryId ?? ''}
-            onChange={(e) => {
-              const selectedId = Number(e.target.value) || 0;
-              const selected = countryOptions.find(c => c.id === selectedId);
-              setCurrentCompany({ ...currentCompany, country: selected?.name || '', countryId: selectedId });
-              clearError('country');
-            }}
-          >
-            <option value="">{language === 'zh' ? '请选择国家' : 'Select Country'}</option>
-            {countryOptions.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        ) : field === 'createdAt' || field === 'registeredDate' ? (
-          <DatePicker
-            value={(currentCompany[field] as string) || ''}
-            onChange={(val) => { setCurrentCompany({ ...currentCompany, [field]: val }); clearError(field); }}
           />
         ) : (
           <input
-            type={field === 'email' ? 'email' : field === 'website' ? 'url' : 'text'}
+            type="text"
             className={`w-full px-3 py-1.5 text-sm border ${hasError(field) ? 'border-red-400 dark:border-red-500 ring-1 ring-red-100 dark:ring-red-900/30' : 'border-gray-200 dark:border-gray-700/50'} rounded-lg bg-white dark:bg-gray-900/50 dark:text-white input-themed focus:ring-2 focus:ring-offset-0 transition-shadow`}
-            value={(currentCompany[field] as string) || ''}
-            onChange={(e) => { setCurrentCompany({ ...currentCompany, [field]: e.target.value }); clearError(field); }}
+            value={(currentRole[field] as string) || ''}
+            onChange={(e) => { setCurrentRole({ ...currentRole, [field]: e.target.value }); clearError(field); }}
           />
         )
       ) : (
@@ -171,42 +152,31 @@ function DetailField({ label, value, editable, field, required, hasError, curren
   );
 }
 
-export default function Companies() {
+export default function Role() {
   const { t, language } = useContext(LanguageContext);
   const { themeColor } = useContext(ThemeContext);
 
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const [roles, setRoles] = useState<RoleItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [currentCompany, setCurrentCompany] = useState<Partial<Company>>({});
-  const [deleteTarget, setDeleteTarget] = useState<Company | null>(null);
+  const [currentRole, setCurrentRole] = useState<Partial<RoleItem>>({});
+  const [deleteTarget, setDeleteTarget] = useState<RoleItem | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [countryOptions, setCountryOptions] = useState<CountryOption[]>([]);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetchCompanies();
-    fetchCountries();
+    fetchRoles();
   }, []);
 
-  const fetchCountries = async () => {
-    try {
-      const data = await countryAPI.getCountries();
-      setCountryOptions(data);
-    } catch (error) {
-      console.warn('[Company] Failed to fetch countries:', error);
-    }
-  };
-
-  const fetchCompanies = async () => {
+  const fetchRoles = async () => {
     setIsLoading(true);
     try {
-      const data = await companyAPI.getCompanies();
-      setCompanies(data);
+      const data = await userRoleAPI.getUserRoles();
+      setRoles(data.map(r => ({ id: r.id, code: r.code, name: r.name, status: 'active' })));
     } catch (error) {
       toast.error(t('fetchError') || '获取数据失败');
     } finally {
@@ -218,16 +188,14 @@ export default function Companies() {
     if (!deleteTarget) return;
     const delName = deleteTarget.name;
     try {
-      await companyAPI.deleteCompany(deleteTarget.id);
-      const refreshed = await companyAPI.getCompanies();
-      setCompanies(refreshed);
+      await userRoleAPI.deleteUserRole(deleteTarget.id);
+      setRoles(prev => prev.filter(r => r.id !== deleteTarget.id));
       showToast(
         language === 'zh' ? '删除成功' : 'Deleted Successfully',
         language === 'zh' ? `${delName} 已被删除` : `${delName} has been deleted`,
         'delete'
       );
     } catch (error) {
-      console.error('[Company] Delete failed:', error);
       toast.error(t('deleteError') || '删除失败');
     } finally {
       setDeleteTarget(null);
@@ -269,56 +237,58 @@ export default function Companies() {
     ), { duration: 4000 });
   };
 
-  const handleAdd = async (company: Omit<Company, 'id'>) => {
-    const compName = company.name || '';
+  const handleAdd = async (role: Partial<RoleItem>) => {
+    const roleName = role.name || '';
     try {
-      await companyAPI.createCompany(company);
-      const refreshed = await companyAPI.getCompanies();
-      setCompanies(refreshed);
+      const newRole = await userRoleAPI.createUserRole({
+        name: role.name || '',
+        code: role.code || '',
+        description: '',
+        permissions: [],
+        createdAt: new Date().toISOString().split('T')[0],
+      });
+      setRoles(prev => [...prev, { id: newRole.id, code: newRole.code, name: newRole.name, status: role.status || 'active' }]);
       setIsAddModalOpen(false);
-      setCurrentCompany({});
+      setCurrentRole({});
       showToast(
         language === 'zh' ? '添加成功' : 'Added Successfully',
-        language === 'zh' ? `${compName} 已成功添加` : `${compName} has been added`,
+        language === 'zh' ? `${roleName} 已成功添加` : `${roleName} has been added`,
         'add'
       );
     } catch (error) {
-      console.error('[Company] Save failed:', error);
       toast.error(t('addError') || '添加失败');
     }
   };
 
-  const handleEdit = async (company: Partial<Company>) => {
-    if (!currentCompany.id) return;
-    const compName = currentCompany.name || '';
-
+  const handleEdit = async (role: Partial<RoleItem>) => {
+    if (!currentRole.id) return;
+    const roleName = currentRole.name || '';
     try {
-      await companyAPI.updateCompany(currentCompany.id, company);
-      const refreshed = await companyAPI.getCompanies();
-      setCompanies(refreshed);
+      await userRoleAPI.updateUserRole(currentRole.id, {
+        name: role.name,
+        code: role.code,
+      });
+      setRoles(prev => prev.map(r => r.id === currentRole.id ? { ...r, ...role } : r));
       setIsEditModalOpen(false);
-      setCurrentCompany({});
+      setCurrentRole({});
       showToast(
         language === 'zh' ? '更新成功' : 'Update Successful',
-        language === 'zh' ? `${compName} 的信息已成功更新` : `${compName}'s info has been updated`,
+        language === 'zh' ? `${roleName} 的信息已成功更新` : `${roleName} has been updated`,
         'update'
       );
     } catch (error) {
-      console.error('[Company] Update failed:', error);
       toast.error(t('updateError') || '更新失败');
     }
   };
 
-  const filteredCompanies = companies.filter(comp =>
-    comp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    comp.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    comp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (comp.contactPerson || '').toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredRoles = roles.filter(role =>
+    role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    role.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const totalPages = Math.max(1, Math.ceil(filteredCompanies.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(filteredRoles.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
-  const paginatedCompanies = filteredCompanies.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const paginatedRoles = filteredRoles.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
@@ -340,81 +310,46 @@ export default function Companies() {
 
   const hasError = (field: string) => !!validationErrors[field];
 
-  const dfProps = { hasError, currentCompany, setCurrentCompany, validationErrors, setValidationErrors, countryOptions, language, t };
+  const dfProps = { hasError, currentRole, setCurrentRole, validationErrors, setValidationErrors, t };
 
-  const renderFormContent = (editable: boolean) => (
+  const renderFormContent = () => (
     <>
       {/* Validation Banner */}
-      {editable && <AnimatePresence><ValidationBanner /></AnimatePresence>}
+      <AnimatePresence><ValidationBanner /></AnimatePresence>
 
       {/* Avatar Header with Status on same line */}
       <div className="flex items-center gap-4 pb-5 border-b border-gray-100 dark:border-gray-800/50">
         <div className="w-14 h-14 rounded-2xl avatar-container text-lg flex-shrink-0 shadow-lg">
-          {getInitials(currentCompany.name || '?')}
+          {getInitials(currentRole.name || '?')}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 capitalize mb-1">{t('companyName')}<span className="text-red-500 ml-0.5">*</span></p>
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 capitalize mb-1">{t('roleName')}<span className="text-red-500 ml-0.5">*</span></p>
           <input
             type="text"
             className={`w-full px-3 py-1.5 text-sm font-semibold border ${hasError('name') ? 'border-red-400 dark:border-red-500 ring-1 ring-red-100 dark:ring-red-900/30' : 'border-gray-200 dark:border-gray-700/50'} rounded-lg bg-white dark:bg-gray-900/50 dark:text-white input-themed`}
-            value={currentCompany.name || ''}
-            onChange={(e) => { setCurrentCompany({ ...currentCompany, name: e.target.value }); if (validationErrors.name) { const err = { ...validationErrors }; delete err.name; setValidationErrors(err); } }}
+            value={currentRole.name || ''}
+            onChange={(e) => { setCurrentRole({ ...currentRole, name: e.target.value }); if (validationErrors.name) { const err = { ...validationErrors }; delete err.name; setValidationErrors(err); } }}
           />
         </div>
         <div className="flex-shrink-0 w-40">
           <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 capitalize mb-1">{t('status')}<span className="text-red-500 ml-0.5">*</span></p>
           <StatusSelect
-            value={(currentCompany.status as string) || 'active'}
-            onChange={(v) => { setCurrentCompany({ ...currentCompany, status: v }); if (validationErrors.status) { const err = { ...validationErrors }; delete err.status; setValidationErrors(err); } }}
+            value={(currentRole.status as string) || 'active'}
+            onChange={(v) => { setCurrentRole({ ...currentRole, status: v }); if (validationErrors.status) { const err = { ...validationErrors }; delete err.status; setValidationErrors(err); } }}
             t={t}
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* Basic Info Card (merged with Contact Info) */}
-        <div className="rounded-xl bg-gradient-to-br from-gray-50 to-gray-50/50 dark:from-gray-800/30 dark:to-gray-800/10 border border-gray-100 dark:border-gray-800/50 p-5 space-y-4">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-6 h-6 rounded-md btn-gradient flex items-center justify-center">
-              <i className="fa-solid fa-building text-[10px] text-white"></i>
-            </div>
-            <h4 className="text-sm font-bold text-gray-900 dark:text-white capitalize">{t('basicInfo')}</h4>
+      {/* Role Info Card */}
+      <div className="rounded-xl bg-gradient-to-br from-gray-50 to-gray-50/50 dark:from-gray-800/30 dark:to-gray-800/10 border border-gray-100 dark:border-gray-800/50 p-5 space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-6 h-6 rounded-md btn-gradient flex items-center justify-center">
+            <i className="fa-solid fa-id-badge text-[10px] text-white"></i>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <DetailField {...dfProps} label={t('companyCode')} value={currentCompany.code} editable={editable} field="code" required />
-            <DetailField {...dfProps} label={t('registeredNo')} value={currentCompany.registeredNo} editable={editable} field="registeredNo" required />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <DetailField {...dfProps} label={t('contactPerson')} value={currentCompany.contactPerson} editable={editable} field="contactPerson" />
-            <DetailField {...dfProps} label={t('registeredDate')} value={currentCompany.registeredDate} editable={editable} field="registeredDate" required />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <DetailField {...dfProps} label={t('phone')} value={currentCompany.phone} editable={editable} field="phone" />
-            <DetailField {...dfProps} label={t('faxNo')} value={currentCompany.fax} editable={editable} field="fax" />
-          </div>
-          <DetailField {...dfProps} label={t('email')} value={currentCompany.email} editable={editable} field="email" />
-          <DetailField {...dfProps} label={t('website')} value={currentCompany.website} editable={editable} field="website" />
+          <h4 className="text-sm font-bold text-gray-900 dark:text-white capitalize">{language === 'zh' ? '角色信息' : 'Role Info'}</h4>
         </div>
-
-        {/* Address Card */}
-        <div className="rounded-xl bg-gradient-to-br from-gray-50 to-gray-50/50 dark:from-gray-800/30 dark:to-gray-800/10 border border-gray-100 dark:border-gray-800/50 p-5 space-y-4">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-6 h-6 rounded-md btn-gradient flex items-center justify-center">
-              <i className="fa-solid fa-location-dot text-[10px] text-white"></i>
-            </div>
-            <h4 className="text-sm font-bold text-gray-900 dark:text-white capitalize">{t('address')}</h4>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <DetailField {...dfProps} label={t('block')} value={currentCompany.block} editable={editable} field="block" />
-            <DetailField {...dfProps} label={t('unitNo')} value={currentCompany.unitNo} editable={editable} field="unitNo" />
-          </div>
-          <DetailField {...dfProps} label={t('street')} value={currentCompany.street} editable={editable} field="street" />
-          <DetailField {...dfProps} label={t('building')} value={currentCompany.building} editable={editable} field="building" />
-          <div className="grid grid-cols-2 gap-4">
-            <DetailField {...dfProps} label={t('postalCode')} value={currentCompany.postalCode} editable={editable} field="postalCode" />
-            <DetailField {...dfProps} label={t('country')} value={currentCompany.country} editable={editable} field="country" required />
-          </div>
-        </div>
+        <DetailField {...dfProps} label={t('roleCode')} value={currentRole.code} editable field="code" required />
       </div>
     </>
   );
@@ -422,12 +357,8 @@ export default function Companies() {
   const validateRequired = (): boolean => {
     const errors: Record<string, string> = {};
     const checks: { field: string; check: boolean; zh: string; en: string }[] = [
-      { field: 'name', check: !currentCompany.name?.trim(), zh: '公司名称', en: 'Company Name' },
-      { field: 'code', check: !currentCompany.code?.trim(), zh: '公司代码', en: 'Company Code' },
-      { field: 'registeredNo', check: !currentCompany.registeredNo?.trim(), zh: '注册号', en: 'Registered No.' },
-      { field: 'registeredDate', check: !currentCompany.registeredDate?.trim(), zh: '注册日期', en: 'Registered Date' },
-      { field: 'status', check: !currentCompany.status, zh: '状态', en: 'Status' },
-      { field: 'country', check: !currentCompany.countryId && !currentCompany.country?.trim(), zh: '国家', en: 'Country' },
+      { field: 'name', check: !currentRole.name?.trim(), zh: '角色名称', en: 'Role Name' },
+      { field: 'code', check: !currentRole.code?.trim(), zh: '角色代码', en: 'Role Code' },
     ];
     checks.forEach(c => { if (c.check) errors[c.field] = language === 'zh' ? c.zh : c.en; });
     setValidationErrors(errors);
@@ -482,8 +413,8 @@ export default function Companies() {
       <div className="sticky -top-4 z-10 -mx-6 px-6 pt-4 pb-3 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t('company')}</h1>
-            <p className="text-sm text-gray-500">{t('manageCompanies')}</p>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t('role')}</h1>
+            <p className="text-sm text-gray-500">{t('manageRoles')}</p>
           </div>
 
           <div className="mt-4 md:mt-0 flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
@@ -501,8 +432,7 @@ export default function Companies() {
             <button
               className="btn-gradient rounded-xl text-sm font-medium text-white px-4 py-2 flex items-center justify-center"
               onClick={() => {
-                const sg = countryOptions.find(c => c.name.toLowerCase().includes('singapore'));
-                setCurrentCompany({ status: 'active', createdAt: new Date().toISOString().split('T')[0], registeredDate: `${new Date().getFullYear()}-01-01`, country: sg?.name || 'Singapore', countryId: sg?.id || 0 });
+                setCurrentRole({ status: 'active' });
                 setValidationErrors({});
                 setIsAddModalOpen(true);
               }}
@@ -514,29 +444,17 @@ export default function Companies() {
         </div>
       </div>
 
-      {/* Company Table */}
+      {/* Role Table */}
       <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800/80 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead>
               <tr className="bg-gradient-to-r from-gray-50/80 to-gray-100/50 dark:from-gray-800/40 dark:to-gray-800/20 border-b border-gray-200/60 dark:border-gray-700/50">
                 <th scope="col" className="px-5 py-3 text-left text-sm font-bold text-gray-900 dark:text-gray-200 capitalize">
-                  {t('companyCode')}
+                  {t('roleCode')}
                 </th>
                 <th scope="col" className="px-5 py-3 text-left text-sm font-bold text-gray-900 dark:text-gray-200 capitalize">
-                  {t('companyName')}
-                </th>
-                <th scope="col" className="px-5 py-3 text-left text-sm font-bold text-gray-900 dark:text-gray-200 capitalize">
-                  {t('contactPerson')}
-                </th>
-                <th scope="col" className="px-5 py-3 text-left text-sm font-bold text-gray-900 dark:text-gray-200 capitalize">
-                  {t('phone')}
-                </th>
-                <th scope="col" className="px-5 py-3 text-left text-sm font-bold text-gray-900 dark:text-gray-200 capitalize">
-                  {t('email')}
-                </th>
-                <th scope="col" className="px-5 py-3 text-left text-sm font-bold text-gray-900 dark:text-gray-200 capitalize">
-                  {t('country')}
+                  {t('roleName')}
                 </th>
                 <th scope="col" className="px-5 py-3 text-left text-sm font-bold text-gray-900 dark:text-gray-200 capitalize">
                   {t('status')}
@@ -560,18 +478,6 @@ export default function Companies() {
                       </div>
                     </td>
                     <td className="px-5 py-3 whitespace-nowrap">
-                      <div className="skeleton h-4 w-20 rounded" />
-                    </td>
-                    <td className="px-5 py-3 whitespace-nowrap">
-                      <div className="skeleton h-4 w-28 rounded" />
-                    </td>
-                    <td className="px-5 py-3 whitespace-nowrap">
-                      <div className="skeleton h-4 w-36 rounded" />
-                    </td>
-                    <td className="px-5 py-3 whitespace-nowrap">
-                      <div className="skeleton h-4 w-24 rounded" />
-                    </td>
-                    <td className="px-5 py-3 whitespace-nowrap">
                       <div className="skeleton h-6 w-16 rounded-lg" />
                     </td>
                     <td className="px-5 py-3 whitespace-nowrap text-right">
@@ -583,9 +489,9 @@ export default function Companies() {
                     </td>
                   </tr>
                 ))
-              ) : filteredCompanies.length === 0 ? (
+              ) : filteredRoles.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center">
+                  <td colSpan={4} className="px-5 py-12 text-center">
                     <div className="flex flex-col items-center">
                       <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
                         <i className="fa-solid fa-magnifying-glass text-gray-400 dark:text-gray-500 text-lg"></i>
@@ -595,52 +501,40 @@ export default function Companies() {
                   </td>
                 </tr>
               ) : (
-                paginatedCompanies.map((company, index) => (
+                paginatedRoles.map((role, index) => (
                   <motion.tr
-                    key={company.id}
+                    key={role.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                     className="group hover:bg-blue-50/30 dark:hover:bg-gray-800/30 transition-colors"
                   >
                     <td className="px-5 py-3 whitespace-nowrap">
-                      <span className="inline-flex px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800/60 text-[13px] font-semibold text-gray-700 dark:text-gray-300 tracking-wide">{company.code}</span>
+                      <span className="inline-flex px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800/60 text-[13px] font-semibold text-gray-700 dark:text-gray-300 tracking-wide">{role.code}</span>
                     </td>
                     <td className="px-5 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg avatar-container text-xs flex-shrink-0">
-                          {company.name.charAt(0)}
+                          {role.name.charAt(0)}
                         </div>
-                        <div className="font-semibold text-[13px] text-gray-900 dark:text-white">{company.name}</div>
+                        <div className="font-semibold text-[13px] text-gray-900 dark:text-white">{role.name}</div>
                       </div>
                     </td>
                     <td className="px-5 py-3 whitespace-nowrap">
-                      <div className="text-[13px] text-gray-600 dark:text-gray-400">{company.contactPerson || '-'}</div>
-                    </td>
-                    <td className="px-5 py-3 whitespace-nowrap">
-                      <div className="text-[13px] text-gray-600 dark:text-gray-400">{company.phone || '-'}</div>
-                    </td>
-                    <td className="px-5 py-3 whitespace-nowrap">
-                      <div className="text-[13px] text-gray-600 dark:text-gray-400">{company.email || '-'}</div>
-                    </td>
-                    <td className="px-5 py-3 whitespace-nowrap">
-                      <div className="text-[13px] text-gray-600 dark:text-gray-400">{company.country || '-'}</div>
-                    </td>
-                    <td className="px-5 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full ${
-                        company.status === 'active'
+                        role.status === 'active'
                           ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                           : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
                       }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${company.status === 'active' ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
-                        {company.status === 'active' ? t('active') : t('inactive')}
+                        <span className={`w-1.5 h-1.5 rounded-full ${role.status === 'active' ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
+                        {role.status === 'active' ? t('active') : t('inactive')}
                       </span>
                     </td>
                     <td className="px-5 py-3 whitespace-nowrap text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button
                           className="w-7 h-7 rounded-lg flex items-center justify-center text-emerald-500 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
-                          onClick={() => { setCurrentCompany(company); setIsDetailModalOpen(true); }}
+                          onClick={() => { setCurrentRole(role); setIsDetailModalOpen(true); }}
                           title={language === 'zh' ? '查看' : 'View'}
                         >
                           <i className="fa-solid fa-eye text-xs"></i>
@@ -648,7 +542,7 @@ export default function Companies() {
                         <button
                           className="w-7 h-7 rounded-lg flex items-center justify-center text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                           onClick={() => {
-                            setCurrentCompany(company);
+                            setCurrentRole(role);
                             setValidationErrors({});
                             setIsEditModalOpen(true);
                           }}
@@ -658,7 +552,7 @@ export default function Companies() {
                         </button>
                         <button
                           className="w-7 h-7 rounded-lg flex items-center justify-center text-red-400 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                          onClick={() => setDeleteTarget(company)}
+                          onClick={() => setDeleteTarget(role)}
                           title={language === 'zh' ? '删除' : 'Delete'}
                         >
                           <i className="fa-solid fa-trash-can text-xs"></i>
@@ -674,7 +568,7 @@ export default function Companies() {
       </div>
 
       {/* Pagination */}
-      {!isLoading && filteredCompanies.length > 0 && (
+      {!isLoading && filteredRoles.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2">
           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <span>{t('rowsPerPage')}:</span>
@@ -688,7 +582,7 @@ export default function Companies() {
               ))}
             </select>
             <span className="ml-2">
-              {(safePage - 1) * pageSize + 1}-{Math.min(safePage * pageSize, filteredCompanies.length)} {t('of')} {filteredCompanies.length} {t('totalRecords')}
+              {(safePage - 1) * pageSize + 1}-{Math.min(safePage * pageSize, filteredRoles.length)} {t('of')} {filteredRoles.length} {t('totalRecords')}
             </span>
           </div>
           <div className="flex items-center gap-1">
@@ -743,35 +637,35 @@ export default function Companies() {
 
       {/* Detail Modal */}
       <AnimatePresence>
-        {isDetailModalOpen && currentCompany.id && (
+        {isDetailModalOpen && currentRole.id && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4"
-            onClick={() => { setIsDetailModalOpen(false); setCurrentCompany({}); }}
+            onClick={() => { setIsDetailModalOpen(false); setCurrentRole({}); }}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0, y: 10 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
               transition={{ type: 'spring', duration: 0.3, bounce: 0.15 }}
-              className="modal-content relative bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 w-full max-w-[60rem] overflow-hidden"
+              className="modal-content relative bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 w-full max-w-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="absolute top-0 left-0 right-0 h-1 btn-gradient" />
               <div className="p-6 border-b border-gray-100 dark:border-gray-800/80 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">{language === 'zh' ? '公司详情' : 'Company Details'}</h3>
-                  {currentCompany.code && (
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">{language === 'zh' ? '角色详情' : 'Role Details'}</h3>
+                  {currentRole.code && (
                     <span className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800/50 text-xs font-medium text-gray-500 dark:text-gray-400">
-                      {currentCompany.code}
+                      {currentRole.code}
                     </span>
                   )}
                 </div>
                 <button
                   className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors"
-                  onClick={() => { setIsDetailModalOpen(false); setCurrentCompany({}); }}
+                  onClick={() => { setIsDetailModalOpen(false); setCurrentRole({}); }}
                 >
                   <i className="fa-solid fa-xmark"></i>
                 </button>
@@ -780,72 +674,40 @@ export default function Companies() {
                 {/* Avatar Header */}
                 <div className="flex items-center gap-4 pb-5 border-b border-gray-100 dark:border-gray-800/50">
                   <div className="w-14 h-14 rounded-2xl avatar-container text-lg flex-shrink-0 shadow-lg">
-                    {getInitials(currentCompany.name || '?')}
+                    {getInitials(currentRole.name || '?')}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-base font-bold text-gray-900 dark:text-white truncate">{currentCompany.name}</h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{currentCompany.email}</p>
+                    <h4 className="text-base font-bold text-gray-900 dark:text-white truncate">{currentRole.name}</h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{currentRole.code}</p>
                   </div>
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-lg ${
-                    currentCompany.status === 'active'
+                    currentRole.status === 'active'
                       ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                       : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                   }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${currentCompany.status === 'active' ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
-                    {currentCompany.status === 'active' ? t('active') : t('inactive')}
+                    <span className={`w-1.5 h-1.5 rounded-full ${currentRole.status === 'active' ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
+                    {currentRole.status === 'active' ? t('active') : t('inactive')}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {/* Basic Info Card (merged with Contact Info) */}
-                  <div className="rounded-xl bg-gradient-to-br from-gray-50 to-gray-50/50 dark:from-gray-800/30 dark:to-gray-800/10 border border-gray-100 dark:border-gray-800/50 p-5 space-y-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-6 h-6 rounded-md btn-gradient flex items-center justify-center">
-                        <i className="fa-solid fa-building text-[10px] text-white"></i>
-                      </div>
-                      <h4 className="text-sm font-bold text-gray-900 dark:text-white capitalize">{t('basicInfo')}</h4>
+                {/* Role Info Card */}
+                <div className="rounded-xl bg-gradient-to-br from-gray-50 to-gray-50/50 dark:from-gray-800/30 dark:to-gray-800/10 border border-gray-100 dark:border-gray-800/50 p-5 space-y-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-6 h-6 rounded-md btn-gradient flex items-center justify-center">
+                      <i className="fa-solid fa-id-badge text-[10px] text-white"></i>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <DetailField {...dfProps} label={t('companyCode')} value={currentCompany.code} field="code" />
-                      <DetailField {...dfProps} label={t('registeredNo')} value={currentCompany.registeredNo} field="registeredNo" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <DetailField {...dfProps} label={t('contactPerson')} value={currentCompany.contactPerson} field="contactPerson" />
-                      <DetailField {...dfProps} label={t('registeredDate')} value={currentCompany.registeredDate} field="registeredDate" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <DetailField {...dfProps} label={t('phone')} value={currentCompany.phone} field="phone" />
-                      <DetailField {...dfProps} label={t('faxNo')} value={currentCompany.fax} field="fax" />
-                    </div>
-                    <DetailField {...dfProps} label={t('email')} value={currentCompany.email} field="email" />
-                    <DetailField {...dfProps} label={t('website')} value={currentCompany.website} field="website" />
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white capitalize">{language === 'zh' ? '角色信息' : 'Role Info'}</h4>
                   </div>
-
-                  {/* Address Card */}
-                  <div className="rounded-xl bg-gradient-to-br from-gray-50 to-gray-50/50 dark:from-gray-800/30 dark:to-gray-800/10 border border-gray-100 dark:border-gray-800/50 p-5 space-y-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-6 h-6 rounded-md btn-gradient flex items-center justify-center">
-                        <i className="fa-solid fa-location-dot text-[10px] text-white"></i>
-                      </div>
-                      <h4 className="text-sm font-bold text-gray-900 dark:text-white capitalize">{t('address')}</h4>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <DetailField {...dfProps} label={t('block')} value={currentCompany.block} field="block" />
-                      <DetailField {...dfProps} label={t('unitNo')} value={currentCompany.unitNo} field="unitNo" />
-                    </div>
-                    <DetailField {...dfProps} label={t('street')} value={currentCompany.street} field="street" />
-                    <DetailField {...dfProps} label={t('building')} value={currentCompany.building} field="building" />
-                    <div className="grid grid-cols-2 gap-4">
-                      <DetailField {...dfProps} label={t('postalCode')} value={currentCompany.postalCode} field="postalCode" />
-                      <DetailField {...dfProps} label={t('country')} value={currentCompany.country} field="country" />
-                    </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <DetailField {...dfProps} label={t('roleCode')} value={currentRole.code} field="code" />
+                    <DetailField {...dfProps} label={t('roleName')} value={currentRole.name} field="name" />
                   </div>
                 </div>
               </div>
               <div className="p-6 border-t border-gray-100 dark:border-gray-800/80 flex justify-end">
                 <button
                   className="px-4 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                  onClick={() => { setIsDetailModalOpen(false); setCurrentCompany({}); }}
+                  onClick={() => { setIsDetailModalOpen(false); setCurrentRole({}); }}
                 >
                   {t('close')}
                 </button>
@@ -855,7 +717,7 @@ export default function Companies() {
         )}
       </AnimatePresence>
 
-      {/* Add Company Modal */}
+      {/* Add Role Modal */}
       <AnimatePresence>
         {isAddModalOpen && (
           <motion.div
@@ -870,38 +732,32 @@ export default function Companies() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
               transition={{ type: 'spring', duration: 0.3, bounce: 0.15 }}
-              className="modal-content relative bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 w-full max-w-[60rem] overflow-hidden"
+              className="modal-content relative bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 w-full max-w-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="absolute top-0 left-0 right-0 h-1 btn-gradient" />
               <div className="p-6 border-b border-gray-100 dark:border-gray-800/80 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('add')} {t('company')}</h3>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('add')} {t('role')}</h3>
                 <button
                   className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors"
-                  onClick={() => {
-                    setIsAddModalOpen(false);
-                    setCurrentCompany({});
-                  }}
+                  onClick={() => { setIsAddModalOpen(false); setCurrentRole({}); }}
                 >
                   <i className="fa-solid fa-xmark"></i>
                 </button>
               </div>
               <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
-                {renderFormContent(true)}
+                {renderFormContent()}
               </div>
               <div className="p-6 border-t border-gray-100 dark:border-gray-800/80 flex justify-end space-x-3">
                 <button
                   className="px-4 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                  onClick={() => {
-                    setIsAddModalOpen(false);
-                    setCurrentCompany({});
-                  }}
+                  onClick={() => { setIsAddModalOpen(false); setCurrentRole({}); }}
                 >
                   {t('cancel')}
                 </button>
                 <button
                   className="btn-gradient rounded-xl text-sm font-medium text-white px-4 py-2"
-                  onClick={() => { if (validateRequired()) handleAdd(currentCompany as Omit<Company, 'id'>); }}
+                  onClick={() => { if (validateRequired()) handleAdd(currentRole); }}
                 >
                   {t('save')}
                 </button>
@@ -911,7 +767,7 @@ export default function Companies() {
         )}
       </AnimatePresence>
 
-      {/* Edit Company Modal */}
+      {/* Edit Role Modal */}
       <AnimatePresence>
         {isEditModalOpen && (
           <motion.div
@@ -926,38 +782,32 @@ export default function Companies() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
               transition={{ type: 'spring', duration: 0.3, bounce: 0.15 }}
-              className="modal-content relative bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 w-full max-w-[60rem] overflow-hidden"
+              className="modal-content relative bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 w-full max-w-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="absolute top-0 left-0 right-0 h-1 btn-gradient" />
               <div className="p-6 border-b border-gray-100 dark:border-gray-800/80 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('edit')} {t('company')}</h3>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('edit')} {t('role')}</h3>
                 <button
                   className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors"
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setCurrentCompany({});
-                  }}
+                  onClick={() => { setIsEditModalOpen(false); setCurrentRole({}); }}
                 >
                   <i className="fa-solid fa-xmark"></i>
                 </button>
               </div>
               <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
-                {renderFormContent(true)}
+                {renderFormContent()}
               </div>
               <div className="p-6 border-t border-gray-100 dark:border-gray-800/80 flex justify-end space-x-3">
                 <button
                   className="px-4 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setCurrentCompany({});
-                  }}
+                  onClick={() => { setIsEditModalOpen(false); setCurrentRole({}); }}
                 >
                   {t('cancel')}
                 </button>
                 <button
                   className="btn-gradient rounded-xl text-sm font-medium text-white px-4 py-2"
-                  onClick={() => { if (validateRequired()) handleEdit(currentCompany); }}
+                  onClick={() => { if (validateRequired()) handleEdit(currentRole); }}
                 >
                   {t('save')}
                 </button>

@@ -340,8 +340,11 @@ export default function DatePicker({ value, onChange, className = '' }: DatePick
       {/* Input */}
       <div
         ref={triggerRef}
-        className="w-full flex items-center gap-2 px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 text-sm input-themed cursor-pointer group"
+        tabIndex={0}
+        role="button"
+        className="w-full flex items-center gap-2 px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 text-sm input-themed cursor-pointer group focus:border-blue-400 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30 focus:outline-none transition-all"
         onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsOpen(!isOpen); } }}
       >
         <i className="fa-regular fa-calendar text-gray-400 dark:text-gray-500 group-hover:text-[var(--primary-color)] transition-colors" />
         <span className={displayValue ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}>

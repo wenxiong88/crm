@@ -94,8 +94,8 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
     .filter(Boolean);
 
   const navigationItems: NavigationItem[] = [
-    { id: 'dashboard', labelKey: 'dashboard', icon: 'fa-chart-pie', iconColor: '#a78bfa', path: '/' },
     { id: 'discover', labelKey: 'discover', icon: 'fa-compass', iconColor: '#fb923c', path: '/discover' },
+    { id: 'dashboard', labelKey: 'dashboard', icon: 'fa-chart-pie', iconColor: '#a78bfa', path: '/' },
     {
       id: 'finance',
       labelKey: 'finance',
@@ -125,10 +125,17 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
       children: [
         { id: 'company', labelKey: 'company', icon: 'fa-building-user', iconColor: '#60a5fa', path: '/administrator/company' },
         { id: 'project', labelKey: 'project', icon: 'fa-folder-open', iconColor: '#fbbf24', path: '/administrator/project' },
+        { id: 'role', labelKey: 'role', icon: 'fa-id-badge', iconColor: '#f472b6', path: '/administrator/role' },
         { id: 'user', labelKey: 'user', icon: 'fa-user-gear', iconColor: '#a78bfa', path: '/administrator/user' },
         { id: 'userRole', labelKey: 'userRole', icon: 'fa-user-tag', iconColor: '#2dd4bf', path: '/administrator/user-role' },
         { id: 'customers', labelKey: 'customers', icon: 'fa-user-group', iconColor: '#38bdf8', path: '/administrator/customers' },
         { id: 'suppliers', labelKey: 'suppliers', icon: 'fa-building', iconColor: '#fb923c', path: '/administrator/suppliers' },
+        { id: 'menu', labelKey: 'menu', icon: 'fa-bars', iconColor: '#818cf8', path: '/administrator/menu' },
+        { id: 'module', labelKey: 'module', icon: 'fa-cubes', iconColor: '#34d399', path: '/administrator/module' },
+        { id: 'menuAccess', labelKey: 'menuAccess', icon: 'fa-key', iconColor: '#fbbf24', path: '/administrator/menu-access' },
+        { id: 'chargeType', labelKey: 'chargeType', icon: 'fa-tags', iconColor: '#a3e635', path: '/administrator/charge-type' },
+        { id: 'chargeCode', labelKey: 'chargeCodeLabel', icon: 'fa-barcode', iconColor: '#22d3ee', path: '/administrator/charge-code' },
+        { id: 'transactionCode', labelKey: 'transactionCode', icon: 'fa-exchange-alt', iconColor: '#f59e0b', path: '/administrator/transaction-code' },
         { id: 'accessRight', labelKey: 'accessRight', icon: 'fa-shield-halved', iconColor: '#f87171', path: '/administrator/access-right' }
       ]
     },
@@ -371,9 +378,16 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
                 ? "bg-amber-500/20 text-amber-300"
                 : "bg-emerald-500/20 text-emerald-300"
             )}
-            title={demoMode ? 'Demo' : 'API'}
+            title={demoMode ? 'Demo' : 'Live'}
           >
-            <i className={cn("fa-solid text-xs", demoMode ? "fa-flask" : "fa-server")}></i>
+            {demoMode ? (
+              <i className="fa-solid fa-flask text-xs"></i>
+            ) : (
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" style={{ animationDuration: '2s' }}></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-400"></span>
+              </span>
+            )}
           </button>
         ) : (
           <button
@@ -386,11 +400,18 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
             className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-white/5 transition-all group"
           >
             <div className="flex items-center gap-2.5">
-              <i className={cn(
-                "fa-solid text-[13px]",
-                demoMode ? "fa-flask text-amber-300" : "fa-server text-emerald-300"
-              )}></i>
-              <span className="text-[12px] font-medium text-white/70 group-hover:text-white/90 transition-colors">
+              {demoMode ? (
+                <i className="fa-solid fa-flask text-[13px] text-amber-300"></i>
+              ) : (
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" style={{ animationDuration: '2s' }}></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
+                </span>
+              )}
+              <span className={cn(
+                "font-medium transition-colors",
+                demoMode ? "text-[12px] text-white/70 group-hover:text-white/90" : "text-[13px] text-emerald-300 group-hover:text-emerald-200 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]"
+              )}>
                 {demoMode ? t('demoMode') : t('apiMode')}
               </span>
             </div>

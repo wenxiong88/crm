@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LanguageContext } from '../contexts/LanguageContext';
 import { ThemeContext } from '../contexts/ThemeContext';
@@ -8,6 +8,186 @@ import { toast } from 'sonner';
 import { format, parse, isValid } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import DatePicker from '../components/DatePicker';
+
+
+function ProjectStatusSelect({ value, onChange, t }: {
+  value: string;
+  onChange: (v: 'active' | 'inactive' | 'completed') => void;
+  t: (key: string) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const options = [
+    { key: 'active' as const, label: t('active'), dot: '#10b981', bg: 'bg-emerald-500' },
+    { key: 'inactive' as const, label: t('inactive'), dot: '#9ca3af', bg: 'bg-gray-400' },
+    { key: 'completed' as const, label: t('completed'), dot: '#3b82f6', bg: 'bg-blue-500' },
+  ];
+  const current = options.find(o => o.key === value) || options[0];
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-sm border rounded-xl transition-all cursor-pointer focus:outline-none ${
+          open
+            ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30'
+            : 'border-gray-200 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-400 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30'
+        } bg-white dark:bg-gray-900/50`}
+      >
+        <span className="flex items-center gap-2 text-gray-900 dark:text-white">
+          <span className="relative flex h-2 w-2">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${current.bg}`} style={{ animationDuration: '2s' }}></span>
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${current.bg}`}></span>
+          </span>
+          {current.label}
+        </span>
+        <i className={`fa-solid fa-chevron-down text-[10px] text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}></i>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.98 }}
+            transition={{ duration: 0.15 }}
+            className="absolute z-50 bottom-full mb-1.5 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700/50 rounded-xl shadow-xl shadow-black/10 dark:shadow-black/30 overflow-hidden"
+          >
+            <div className="py-1">
+              {options.map(opt => {
+                const isSelected = value === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => { onChange(opt.key); setOpen(false); }}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
+                      isSelected
+                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/40'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: opt.dot }}></span>
+                      <span>{opt.label}</span>
+                    </span>
+                    {isSelected && <i className="fa-solid fa-check text-[10px] text-blue-500"></i>}
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function ProjectDetailField({ label, value, editable, field, required, hasError, currentProject, setCurrentProject, companies, validationErrors, setValidationErrors, language, t }: {
+  label: string;
+  value: string | undefined;
+  editable?: boolean;
+  field?: keyof Project;
+  required?: boolean;
+  hasError: (f: string) => boolean;
+  currentProject: Partial<Project>;
+  setCurrentProject: (p: Partial<Project>) => void;
+  companies: Company[];
+  validationErrors: Record<string, string>;
+  setValidationErrors: (e: Record<string, string>) => void;
+  language: string;
+  t: (key: string) => string;
+}) {
+  const clearError = (f: string) => {
+    if (validationErrors[f]) { const e = { ...validationErrors }; delete e[f]; setValidationErrors(e); }
+  };
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '-';
+    const d = parse(dateStr, 'yyyy-MM-dd', new Date());
+    if (!isValid(d)) return dateStr;
+    return format(d, 'dd MMM yyyy', { locale: language === 'zh' ? zhCN : undefined });
+  };
+
+  return (
+    <div className="min-w-0">
+      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 capitalize mb-1 whitespace-nowrap">
+        {label}
+        {required && editable && <span className="text-red-500 ml-0.5">*</span>}
+      </p>
+      {editable && field ? (
+        field === 'status' ? (
+          <ProjectStatusSelect
+            value={(currentProject.status as string) || 'active'}
+            onChange={(v) => { setCurrentProject({ ...currentProject, status: v }); clearError('status'); }}
+            t={t}
+          />
+        ) : field === 'companyId' ? (
+          <select
+            className={`w-full px-3 py-1.5 border ${hasError('companyId') ? 'border-red-400 dark:border-red-500 ring-1 ring-red-100 dark:ring-red-900/30' : 'border-gray-200 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600'} rounded-xl bg-white dark:bg-gray-900/50 dark:text-white text-sm transition-all cursor-pointer focus:border-blue-400 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30 focus:outline-none appearance-none`}
+            style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 20 20\' fill=\'%239ca3af\'%3E%3Cpath fill-rule=\'evenodd\' d=\'M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z\' clip-rule=\'evenodd\'/%3E%3C/svg%3E")', backgroundPosition: 'right 0.5rem center', backgroundSize: '1.25em', backgroundRepeat: 'no-repeat', paddingRight: '2rem' }}
+            value={currentProject.companyId || ''}
+            onChange={(e) => {
+              const company = companies.find(c => c.id === e.target.value);
+              setCurrentProject({ ...currentProject, companyId: e.target.value, companyName: company?.name || '' });
+              clearError('companyId');
+            }}
+          >
+            <option value="">{language === 'zh' ? '请选择公司' : 'Select Company'}</option>
+            {companies.map(company => (
+              <option key={company.id} value={company.id}>{company.name}</option>
+            ))}
+          </select>
+        ) : field === 'startDate' || field === 'endDate' ? (
+          <DatePicker
+            value={(currentProject[field] as string) || ''}
+            onChange={(val) => { setCurrentProject({ ...currentProject, [field]: val }); clearError(field); }}
+          />
+        ) : field === 'description' ? (
+          <textarea
+            className={`w-full px-3 py-1.5 text-sm border ${hasError('description') ? 'border-red-400 dark:border-red-500 ring-1 ring-red-100 dark:ring-red-900/30' : 'border-gray-200 dark:border-gray-700/50'} rounded-lg bg-white dark:bg-gray-900/50 dark:text-white input-themed focus:ring-2 focus:ring-offset-0 transition-shadow`}
+            rows={3}
+            value={(currentProject.description as string) || ''}
+            onChange={(e) => { setCurrentProject({ ...currentProject, description: e.target.value }); clearError('description'); }}
+          />
+        ) : (
+          <input
+            type="text"
+            className={`w-full px-3 py-1.5 text-sm border ${hasError(field) ? 'border-red-400 dark:border-red-500 ring-1 ring-red-100 dark:ring-red-900/30' : 'border-gray-200 dark:border-gray-700/50'} rounded-lg bg-white dark:bg-gray-900/50 dark:text-white input-themed focus:ring-2 focus:ring-offset-0 transition-shadow`}
+            value={(currentProject[field] as string) || ''}
+            onChange={(e) => { setCurrentProject({ ...currentProject, [field]: e.target.value }); clearError(field); }}
+          />
+        )
+      ) : (
+        field === 'status' ? (
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg ${
+            value === 'active'
+              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+              : value === 'completed'
+                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${value === 'active' ? 'bg-emerald-500' : value === 'completed' ? 'bg-blue-500' : 'bg-gray-400'}`}></span>
+            {value === 'active' ? t('active') : value === 'completed' ? t('completed') : t('inactive')}
+          </span>
+        ) : field === 'startDate' || field === 'endDate' ? (
+          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{formatDate(value)}</p>
+        ) : (
+          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{value || '-'}</p>
+        )
+      )}
+    </div>
+  );
+}
 
 export default function Projects() {
   const { t, language } = useContext(LanguageContext);
@@ -30,7 +210,8 @@ export default function Projects() {
   const [currentProject, setCurrentProject] = useState<Partial<Project>>({});
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(10);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchProjects();
@@ -58,13 +239,55 @@ export default function Projects() {
     }
   };
 
+  const showToast = (title: string, description: string, variant: 'add' | 'update' | 'delete' = 'update') => {
+    const config = {
+      add: { icon: 'fa-solid fa-plus', bar: 'bg-gradient-to-r from-emerald-400 to-cyan-500', iconBg: 'bg-gradient-to-br from-emerald-400 to-cyan-500' },
+      update: { icon: 'fa-solid fa-check', bar: 'btn-gradient', iconBg: 'btn-gradient' },
+      delete: { icon: 'fa-solid fa-trash-can', bar: 'bg-gradient-to-r from-red-400 to-rose-500', iconBg: 'bg-gradient-to-br from-red-400 to-rose-500' },
+    }[variant];
+    toast.custom((id) => (
+      <div
+        className="w-[360px] bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 overflow-hidden"
+        style={{ boxShadow: '0 20px 40px -12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
+      >
+        <div className={`h-1 ${config.bar}`} />
+        <div className="p-4 flex items-start gap-3">
+          <div className={`w-10 h-10 rounded-xl ${config.iconBg} flex items-center justify-center flex-shrink-0`}>
+            <i className={`${config.icon} text-white text-sm`} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">{title}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{description}</p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5">
+              <i className="fa-regular fa-clock mr-1" />
+              {format(new Date(), 'dd MMM yyyy HH:mm')}
+            </p>
+          </div>
+          <button
+            className="w-6 h-6 rounded-lg flex items-center justify-center text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors flex-shrink-0"
+            onClick={() => toast.dismiss(id)}
+          >
+            <i className="fa-solid fa-xmark text-xs" />
+          </button>
+        </div>
+      </div>
+    ), { duration: 4000 });
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    const delName = deleteTarget.name;
     try {
       await projectAPI.deleteProject(deleteTarget.id);
-      setProjects(projects.filter(proj => proj.id !== deleteTarget.id));
-      toast.success(t('deleteSuccess') || '删除成功');
+      const refreshed = await projectAPI.getProjects();
+      setProjects(refreshed);
+      showToast(
+        language === 'zh' ? '删除成功' : 'Deleted Successfully',
+        language === 'zh' ? `${delName} 已被删除` : `${delName} has been deleted`,
+        'delete'
+      );
     } catch (error) {
+      console.error('[Project] Delete failed:', error);
       toast.error(t('deleteError') || '删除失败');
     } finally {
       setDeleteTarget(null);
@@ -72,13 +295,20 @@ export default function Projects() {
   };
 
   const handleAdd = async (project: Omit<Project, 'id'>) => {
+    const projName = project.name || '';
     try {
-      const newProject = await projectAPI.createProject(project);
-      setProjects([...projects, newProject]);
+      await projectAPI.createProject(project);
+      const refreshed = await projectAPI.getProjects();
+      setProjects(refreshed);
       setIsAddModalOpen(false);
       setCurrentProject({});
-      toast.success(t('addSuccess') || '添加成功');
+      showToast(
+        language === 'zh' ? '添加成功' : 'Added Successfully',
+        language === 'zh' ? `${projName} 已成功添加` : `${projName} has been added`,
+        'add'
+      );
     } catch (error) {
+      console.error('[Project] Save failed:', error);
       toast.error(t('addError') || '添加失败');
     }
   };
@@ -86,55 +316,21 @@ export default function Projects() {
   const handleEdit = async (project: Partial<Project>) => {
     if (!currentProject.id) return;
     const projName = currentProject.name || '';
-
     try {
       await projectAPI.updateProject(currentProject.id, project);
-      setProjects(projects.map(proj =>
-        proj.id === currentProject.id ? { ...proj, ...project } : proj
-      ));
+      const refreshed = await projectAPI.getProjects();
+      setProjects(refreshed);
       setIsEditModalOpen(false);
       setCurrentProject({});
-      toast.custom((id) => (
-        <div
-          className="w-[360px] bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 overflow-hidden"
-          style={{ boxShadow: '0 20px 40px -12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)' }}
-        >
-          <div className="h-1 btn-gradient" />
-          <div className="p-4 flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl btn-gradient flex items-center justify-center flex-shrink-0">
-              <i className="fa-solid fa-check text-white text-sm" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">{language === 'zh' ? '更新成功' : 'Update Successful'}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                {language === 'zh' ? `${projName} 的信息已成功更新` : `${projName} has been updated`}
-              </p>
-              <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5">
-                <i className="fa-regular fa-clock mr-1" />
-                {format(new Date(), 'dd MMM yyyy HH:mm')}
-              </p>
-            </div>
-            <button
-              className="w-6 h-6 rounded-lg flex items-center justify-center text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors flex-shrink-0"
-              onClick={() => toast.dismiss(id)}
-            >
-              <i className="fa-solid fa-xmark text-xs" />
-            </button>
-          </div>
-        </div>
-      ), { duration: 4000 });
+      showToast(
+        language === 'zh' ? '更新成功' : 'Update Successful',
+        language === 'zh' ? `${projName} 的信息已成功更新` : `${projName} has been updated`,
+        'update'
+      );
     } catch (error) {
+      console.error('[Project] Update failed:', error);
       toast.error(t('updateError') || '更新失败');
     }
-  };
-
-  const handleCompanyChange = (companyId: string) => {
-    const company = companies.find(c => c.id === companyId);
-    setCurrentProject({
-      ...currentProject,
-      companyId,
-      companyName: company?.name || ''
-    });
   };
 
   const filteredProjects = projects.filter(proj =>
@@ -161,17 +357,6 @@ export default function Projects() {
     return pages;
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-400';
-    }
-  };
-
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'active': return t('active');
@@ -180,89 +365,120 @@ export default function Projects() {
     }
   };
 
-  const renderFormFields = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('projectCode')}
-        </label>
-        <input
-          type="text"
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-          value={currentProject.code || ''}
-          onChange={(e) => setCurrentProject({ ...currentProject, code: e.target.value })}
-        />
+  const getInitials = (name: string) => {
+    return name.charAt(0).toUpperCase();
+  };
+
+  const hasError = (field: string) => !!validationErrors[field];
+
+  const dfProps = { hasError, currentProject, setCurrentProject, companies, validationErrors, setValidationErrors, language, t };
+
+  const validateRequired = (): boolean => {
+    const errors: Record<string, string> = {};
+    const checks: { field: string; check: boolean; zh: string; en: string }[] = [
+      { field: 'code', check: !currentProject.code?.trim(), zh: '项目代码', en: 'Project Code' },
+      { field: 'name', check: !currentProject.name?.trim(), zh: '项目名称', en: 'Project Name' },
+      { field: 'companyId', check: !currentProject.companyId, zh: '所属公司', en: 'Company' },
+      { field: 'status', check: !currentProject.status, zh: '状态', en: 'Status' },
+    ];
+    checks.forEach(c => { if (c.check) errors[c.field] = language === 'zh' ? c.zh : c.en; });
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const ValidationBanner = () => {
+    const errorList = Object.values(validationErrors);
+    if (errorList.length === 0) return null;
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -8, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -8, scale: 0.98 }}
+        transition={{ type: 'spring', duration: 0.4, bounce: 0.15 }}
+        className="rounded-xl border border-red-200 dark:border-red-800/50 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/30 dark:to-orange-950/20 p-4"
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <i className="fa-solid fa-circle-exclamation text-red-500 dark:text-red-400 text-sm"></i>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-red-700 dark:text-red-400 mb-2">
+              {language === 'zh' ? '请填写以下必填信息' : 'Please fill in the required fields'}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {errorList.map((name) => (
+                <span
+                  key={name}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/80 dark:bg-gray-900/50 border border-red-200/60 dark:border-red-800/40 text-xs font-medium text-red-600 dark:text-red-400"
+                >
+                  <i className="fa-solid fa-xmark text-[9px]"></i>
+                  {name}
+                </span>
+              ))}
+            </div>
+          </div>
+          <button
+            className="w-6 h-6 rounded-md flex items-center justify-center text-red-300 dark:text-red-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex-shrink-0"
+            onClick={() => setValidationErrors({})}
+          >
+            <i className="fa-solid fa-xmark text-xs"></i>
+          </button>
+        </div>
+      </motion.div>
+    );
+  };
+
+  const renderFormContent = (editable: boolean) => (
+    <>
+      {/* Validation Banner */}
+      {editable && <AnimatePresence><ValidationBanner /></AnimatePresence>}
+
+      {/* Avatar Header with Status on same line */}
+      <div className="flex items-center gap-4 pb-5 border-b border-gray-100 dark:border-gray-800/50">
+        <div className="w-14 h-14 rounded-2xl avatar-container text-lg flex-shrink-0 shadow-lg">
+          {getInitials(currentProject.name || '?')}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 capitalize mb-1">{t('projectName')}<span className="text-red-500 ml-0.5">*</span></p>
+          <input
+            type="text"
+            className={`w-full px-3 py-1.5 text-sm font-semibold border ${hasError('name') ? 'border-red-400 dark:border-red-500 ring-1 ring-red-100 dark:ring-red-900/30' : 'border-gray-200 dark:border-gray-700/50'} rounded-lg bg-white dark:bg-gray-900/50 dark:text-white input-themed`}
+            value={currentProject.name || ''}
+            onChange={(e) => { setCurrentProject({ ...currentProject, name: e.target.value }); if (validationErrors.name) { const err = { ...validationErrors }; delete err.name; setValidationErrors(err); } }}
+          />
+        </div>
+        <div className="flex-shrink-0 w-40">
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 capitalize mb-1">{t('status')}<span className="text-red-500 ml-0.5">*</span></p>
+          <ProjectStatusSelect
+            value={(currentProject.status as string) || 'active'}
+            onChange={(v) => { setCurrentProject({ ...currentProject, status: v }); if (validationErrors.status) { const err = { ...validationErrors }; delete err.status; setValidationErrors(err); } }}
+            t={t}
+          />
+        </div>
       </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('projectName')}
-        </label>
-        <input
-          type="text"
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-          value={currentProject.name || ''}
-          onChange={(e) => setCurrentProject({ ...currentProject, name: e.target.value })}
-        />
+
+      {/* Single merged card */}
+      <div className="rounded-xl bg-gradient-to-br from-gray-50 to-gray-50/50 dark:from-gray-800/30 dark:to-gray-800/10 border border-gray-100 dark:border-gray-800/50 p-5 space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-6 h-6 rounded-md btn-gradient flex items-center justify-center">
+            <i className="fa-solid fa-diagram-project text-[10px] text-white"></i>
+          </div>
+          <h4 className="text-sm font-bold text-gray-900 dark:text-white capitalize">{language === 'zh' ? '项目信息' : 'Project Info'}</h4>
+        </div>
+        {/* Project Code + Company */}
+        <div className="grid grid-cols-2 gap-4">
+          <ProjectDetailField {...dfProps} label={t('projectCode')} value={currentProject.code} editable={editable} field="code" required />
+          <ProjectDetailField {...dfProps} label={t('company')} value={currentProject.companyName} editable={editable} field="companyId" required />
+        </div>
+        {/* Start Date + End Date */}
+        <div className="grid grid-cols-2 gap-4">
+          <ProjectDetailField {...dfProps} label={t('startDate')} value={currentProject.startDate} editable={editable} field="startDate" />
+          <ProjectDetailField {...dfProps} label={t('endDate')} value={currentProject.endDate} editable={editable} field="endDate" />
+        </div>
+        {/* Description */}
+        <ProjectDetailField {...dfProps} label={t('description')} value={currentProject.description} editable={editable} field="description" />
       </div>
-      <div className="md:col-span-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('selectCompany')}
-        </label>
-        <select
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-          value={currentProject.companyId || ''}
-          onChange={(e) => handleCompanyChange(e.target.value)}
-        >
-          <option value="">{t('selectCompany')}</option>
-          {companies.map(company => (
-            <option key={company.id} value={company.id}>{company.name}</option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('startDate')}
-        </label>
-        <DatePicker
-          value={currentProject.startDate || ''}
-          onChange={(val) => setCurrentProject({ ...currentProject, startDate: val })}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('endDate')}
-        </label>
-        <DatePicker
-          value={currentProject.endDate || ''}
-          onChange={(val) => setCurrentProject({ ...currentProject, endDate: val })}
-        />
-      </div>
-      <div className="md:col-span-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('status')}
-        </label>
-        <select
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-          value={currentProject.status || 'active'}
-          onChange={(e) => setCurrentProject({ ...currentProject, status: e.target.value as 'active' | 'inactive' | 'completed' })}
-        >
-          <option value="active">{t('active')}</option>
-          <option value="inactive">{t('inactive')}</option>
-          <option value="completed">{t('completed')}</option>
-        </select>
-      </div>
-      <div className="md:col-span-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('description')}
-        </label>
-        <textarea
-          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-900/50 dark:text-white input-themed text-sm"
-          rows={3}
-          value={currentProject.description || ''}
-          onChange={(e) => setCurrentProject({ ...currentProject, description: e.target.value })}
-        />
-      </div>
-    </div>
+    </>
   );
 
   return (
@@ -290,7 +506,11 @@ export default function Projects() {
             <button
               className="btn-gradient rounded-xl text-sm font-medium text-white px-4 py-2 flex items-center justify-center"
               onClick={() => {
-                setCurrentProject({ status: 'active' });
+                const today = new Date();
+                const yearEnd = `${today.getFullYear()}-12-31`;
+                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                setCurrentProject({ status: 'active', startDate: todayStr, endDate: yearEnd });
+                setValidationErrors({});
                 setIsAddModalOpen(true);
               }}
             >
@@ -302,76 +522,76 @@ export default function Projects() {
       </div>
 
       {/* Project Table */}
-      <div className="bg-white dark:bg-gray-900/80 rounded-xl border border-gray-100 dark:border-gray-800/80 overflow-hidden">
+      <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-gray-800/80 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead>
-              <tr className="border-b border-gray-100 dark:border-gray-800/80">
-                <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+              <tr className="bg-gradient-to-r from-gray-50/80 to-gray-100/50 dark:from-gray-800/40 dark:to-gray-800/20 border-b border-gray-200/60 dark:border-gray-700/50">
+                <th scope="col" className="px-5 py-3 text-left text-sm font-bold text-gray-900 dark:text-gray-200 capitalize">
                   {t('projectCode')}
                 </th>
-                <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-5 py-3 text-left text-sm font-bold text-gray-900 dark:text-gray-200 capitalize">
                   {t('projectName')}
                 </th>
-                <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  {t('companyName')}
+                <th scope="col" className="px-5 py-3 text-left text-sm font-bold text-gray-900 dark:text-gray-200 capitalize">
+                  {t('company')}
                 </th>
-                <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-5 py-3 text-left text-sm font-bold text-gray-900 dark:text-gray-200 capitalize">
                   {t('startDate')}
                 </th>
-                <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-5 py-3 text-left text-sm font-bold text-gray-900 dark:text-gray-200 capitalize">
                   {t('endDate')}
                 </th>
-                <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-5 py-3 text-left text-sm font-bold text-gray-900 dark:text-gray-200 capitalize">
                   {t('status')}
                 </th>
-                <th scope="col" className="px-4 py-2.5 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-5 py-3 text-right text-sm font-bold text-gray-900 dark:text-gray-200 capitalize">
                   {t('actions')}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
+            <tbody className="divide-y divide-gray-100/80 dark:divide-gray-800/50">
               {isLoading ? (
                 Array.from({ length: pageSize }).map((_, i) => (
                   <tr key={`skeleton-${i}`}>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
+                    <td className="px-5 py-3 whitespace-nowrap">
                       <div className="skeleton h-4 w-20 rounded" />
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
+                    <td className="px-5 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="skeleton w-8 h-8 rounded-lg flex-shrink-0" />
                         <div className="skeleton h-4 w-24 rounded" />
                       </div>
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
+                    <td className="px-5 py-3 whitespace-nowrap">
                       <div className="skeleton h-4 w-28 rounded" />
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
+                    <td className="px-5 py-3 whitespace-nowrap">
                       <div className="skeleton h-4 w-24 rounded" />
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
+                    <td className="px-5 py-3 whitespace-nowrap">
                       <div className="skeleton h-4 w-24 rounded" />
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="skeleton h-5 w-16 rounded-lg" />
+                    <td className="px-5 py-3 whitespace-nowrap">
+                      <div className="skeleton h-6 w-16 rounded-lg" />
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-right">
+                    <td className="px-5 py-3 whitespace-nowrap text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <div className="skeleton w-8 h-8 rounded-lg" />
-                        <div className="skeleton w-8 h-8 rounded-lg" />
-                        <div className="skeleton w-8 h-8 rounded-lg" />
+                        <div className="skeleton w-7 h-7 rounded-lg" />
+                        <div className="skeleton w-7 h-7 rounded-lg" />
+                        <div className="skeleton w-7 h-7 rounded-lg" />
                       </div>
                     </td>
                   </tr>
                 ))
               ) : filteredProjects.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center">
+                  <td colSpan={7} className="px-5 py-12 text-center">
                     <div className="flex flex-col items-center">
                       <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
                         <i className="fa-solid fa-magnifying-glass text-gray-400 dark:text-gray-500 text-lg"></i>
                       </div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('noData') || '暂无数据'}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('noData') || '暂无数据'}</p>
                     </div>
                   </td>
                 </tr>
@@ -382,55 +602,66 @@ export default function Projects() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors"
+                    className="group hover:bg-blue-50/30 dark:hover:bg-gray-800/30 transition-colors"
                   >
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">{project.code}</div>
+                    <td className="px-5 py-3 whitespace-nowrap">
+                      <span className="inline-flex px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800/60 text-[13px] font-semibold text-gray-700 dark:text-gray-300 tracking-wide">{project.code}</span>
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
+                    <td className="px-5 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg avatar-container text-xs flex-shrink-0">
                           {project.name.charAt(0)}
                         </div>
-                        <div className="font-medium text-sm text-gray-900 dark:text-white">{project.name}</div>
+                        <div className="font-semibold text-[13px] text-gray-900 dark:text-white">{project.name}</div>
                       </div>
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="text-sm text-gray-600 dark:text-gray-400">{project.companyName}</div>
+                    <td className="px-5 py-3 whitespace-nowrap">
+                      <div className="text-[13px] text-gray-600 dark:text-gray-400">{project.companyName}</div>
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="text-sm text-gray-600 dark:text-gray-400">{formatDate(project.startDate)}</div>
+                    <td className="px-5 py-3 whitespace-nowrap">
+                      <div className="text-[13px] text-gray-600 dark:text-gray-400">{formatDate(project.startDate)}</div>
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="text-sm text-gray-600 dark:text-gray-400">{formatDate(project.endDate)}</div>
+                    <td className="px-5 py-3 whitespace-nowrap">
+                      <div className="text-[13px] text-gray-600 dark:text-gray-400">{formatDate(project.endDate)}</div>
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg ${getStatusBadge(project.status)}`}>
+                    <td className="px-5 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full ${
+                        project.status === 'active'
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                          : project.status === 'completed'
+                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                            : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${project.status === 'active' ? 'bg-emerald-500' : project.status === 'completed' ? 'bg-blue-500' : 'bg-gray-400'}`}></span>
                         {getStatusLabel(project.status)}
                       </span>
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-right">
+                    <td className="px-5 py-3 whitespace-nowrap text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-emerald-500 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
                           onClick={() => { setCurrentProject(project); setIsDetailModalOpen(true); }}
+                          title={language === 'zh' ? '查看' : 'View'}
                         >
-                          <i className="fa-solid fa-eye text-sm"></i>
+                          <i className="fa-solid fa-eye text-xs"></i>
                         </button>
                         <button
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                           onClick={() => {
                             setCurrentProject(project);
+                            setValidationErrors({});
                             setIsEditModalOpen(true);
                           }}
+                          title={language === 'zh' ? '编辑' : 'Edit'}
                         >
-                          <i className="fa-solid fa-pen-to-square text-sm"></i>
+                          <i className="fa-solid fa-pen-to-square text-xs"></i>
                         </button>
                         <button
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-red-400 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                           onClick={() => setDeleteTarget(project)}
+                          title={language === 'zh' ? '删除' : 'Delete'}
                         >
-                          <i className="fa-solid fa-trash-can text-sm"></i>
+                          <i className="fa-solid fa-trash-can text-xs"></i>
                         </button>
                       </div>
                     </td>
@@ -530,7 +761,14 @@ export default function Projects() {
             >
               <div className="absolute top-0 left-0 right-0 h-1 btn-gradient" />
               <div className="p-6 border-b border-gray-100 dark:border-gray-800/80 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{language === 'zh' ? '项目详情' : 'Project Details'}</h3>
+                <div className="flex items-center gap-3">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">{language === 'zh' ? '项目详情' : 'Project Details'}</h3>
+                  {currentProject.code && (
+                    <span className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800/50 text-xs font-medium text-gray-500 dark:text-gray-400">
+                      {currentProject.code}
+                    </span>
+                  )}
+                </div>
                 <button
                   className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors"
                   onClick={() => { setIsDetailModalOpen(false); setCurrentProject({}); }}
@@ -538,48 +776,48 @@ export default function Projects() {
                   <i className="fa-solid fa-xmark"></i>
                 </button>
               </div>
-              <div className="p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800/50 p-5">
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">{language === 'zh' ? '基本信息' : 'Basic Info'}</h4>
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('projectCode')}</p>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{currentProject.code}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('projectName')}</p>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{currentProject.name}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('companyName')}</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentProject.companyName}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('status')}</p>
-                        <span className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg ${getStatusBadge(currentProject.status || '')}`}>
-                          {getStatusLabel(currentProject.status || '')}
-                        </span>
-                      </div>
-                    </div>
+              <div className="p-6 space-y-5">
+                {/* Avatar Header with Status */}
+                <div className="flex items-center gap-4 pb-5 border-b border-gray-100 dark:border-gray-800/50">
+                  <div className="w-14 h-14 rounded-2xl avatar-container text-lg flex-shrink-0 shadow-lg">
+                    {getInitials(currentProject.name || '?')}
                   </div>
-                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800/50 p-5">
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">{language === 'zh' ? '日期与描述' : 'Dates & Description'}</h4>
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('startDate')}</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{formatDate(currentProject.startDate)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('endDate')}</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{formatDate(currentProject.endDate)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{t('description')}</p>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{currentProject.description || '-'}</p>
-                      </div>
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-base font-bold text-gray-900 dark:text-white truncate">{currentProject.name}</h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{currentProject.companyName}</p>
                   </div>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg ${
+                    currentProject.status === 'active'
+                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                      : currentProject.status === 'completed'
+                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${currentProject.status === 'active' ? 'bg-emerald-500' : currentProject.status === 'completed' ? 'bg-blue-500' : 'bg-gray-400'}`}></span>
+                    {getStatusLabel(currentProject.status || '')}
+                  </span>
+                </div>
+
+                {/* Single merged card */}
+                <div className="rounded-xl bg-gradient-to-br from-gray-50 to-gray-50/50 dark:from-gray-800/30 dark:to-gray-800/10 border border-gray-100 dark:border-gray-800/50 p-5 space-y-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-6 h-6 rounded-md btn-gradient flex items-center justify-center">
+                      <i className="fa-solid fa-diagram-project text-[10px] text-white"></i>
+                    </div>
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white capitalize">{language === 'zh' ? '项目信息' : 'Project Info'}</h4>
+                  </div>
+                  {/* Project Code + Company */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <ProjectDetailField {...dfProps} label={t('projectCode')} value={currentProject.code} field="code" />
+                    <ProjectDetailField {...dfProps} label={t('company')} value={currentProject.companyName} field="companyName" />
+                  </div>
+                  {/* Start Date + End Date */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <ProjectDetailField {...dfProps} label={t('startDate')} value={currentProject.startDate} field="startDate" />
+                    <ProjectDetailField {...dfProps} label={t('endDate')} value={currentProject.endDate} field="endDate" />
+                  </div>
+                  {/* Description */}
+                  <ProjectDetailField {...dfProps} label={t('description')} value={currentProject.description} field="description" />
                 </div>
               </div>
               <div className="p-6 border-t border-gray-100 dark:border-gray-800/80 flex justify-end">
@@ -610,7 +848,7 @@ export default function Projects() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
               transition={{ type: 'spring', duration: 0.3, bounce: 0.15 }}
-              className="modal-content relative bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+              className="modal-content relative bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 w-full max-w-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="absolute top-0 left-0 right-0 h-1 btn-gradient" />
@@ -626,8 +864,8 @@ export default function Projects() {
                   <i className="fa-solid fa-xmark"></i>
                 </button>
               </div>
-              <div className="p-6">
-                {renderFormFields()}
+              <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+                {renderFormContent(true)}
               </div>
               <div className="p-6 border-t border-gray-100 dark:border-gray-800/80 flex justify-end space-x-3">
                 <button
@@ -641,7 +879,7 @@ export default function Projects() {
                 </button>
                 <button
                   className="btn-gradient rounded-xl text-sm font-medium text-white px-4 py-2"
-                  onClick={() => handleAdd(currentProject as Omit<Project, 'id'>)}
+                  onClick={() => { if (validateRequired()) handleAdd(currentProject as Omit<Project, 'id'>); }}
                 >
                   {t('save')}
                 </button>
@@ -666,7 +904,7 @@ export default function Projects() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
               transition={{ type: 'spring', duration: 0.3, bounce: 0.15 }}
-              className="modal-content relative bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+              className="modal-content relative bg-white dark:bg-gray-900/95 rounded-2xl border border-gray-100 dark:border-gray-800/80 w-full max-w-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="absolute top-0 left-0 right-0 h-1 btn-gradient" />
@@ -682,8 +920,8 @@ export default function Projects() {
                   <i className="fa-solid fa-xmark"></i>
                 </button>
               </div>
-              <div className="p-6">
-                {renderFormFields()}
+              <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+                {renderFormContent(true)}
               </div>
               <div className="p-6 border-t border-gray-100 dark:border-gray-800/80 flex justify-end space-x-3">
                 <button
@@ -697,7 +935,7 @@ export default function Projects() {
                 </button>
                 <button
                   className="btn-gradient rounded-xl text-sm font-medium text-white px-4 py-2"
-                  onClick={() => handleEdit(currentProject)}
+                  onClick={() => { if (validateRequired()) handleEdit(currentProject); }}
                 >
                   {t('save')}
                 </button>

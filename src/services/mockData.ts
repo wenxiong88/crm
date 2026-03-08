@@ -28,6 +28,8 @@ export interface Customer {
   building: string;
   postalCode: string;
   country: string;
+  countryId?: number;
+  status: 'active' | 'inactive';
 }
 
 // 供应商数据类型
@@ -93,9 +95,20 @@ export interface Company {
   id: string;
   code: string;
   name: string;
-  address: string;
+  registeredNo: string;
+  registeredDate: string;
+  contactPerson: string;
   phone: string;
+  fax: string;
+  website: string;
   email: string;
+  block: string;
+  unitNo: string;
+  street: string;
+  building: string;
+  postalCode: string;
+  country: string;
+  countryId?: number;
   createdAt: string;
   status: 'active' | 'inactive';
 }
@@ -139,6 +152,54 @@ export interface UserRole {
   description: string;
   permissions: string[];
   createdAt: string;
+}
+
+// 费用类型数据类型
+export interface ChargeType {
+  id: string;
+  name: string;
+  status: string;
+}
+
+// 费用代码数据类型
+export interface ChargeCode {
+  id: string;
+  code: string;
+  description: string;
+  chargeTypeId: string;
+  chargeTypeName: string;
+  status: string;
+}
+
+// 菜单数据类型
+export interface MenuItem {
+  id: string;
+  name: string;
+  status: string;
+}
+
+// 模块数据类型
+export interface ModuleItem {
+  id: string;
+  name: string;
+  status: string;
+}
+
+// 菜单权限数据类型
+export interface MenuAccess {
+  id: string;
+  menuId: string;
+  menuName: string;
+  roleIds: string[];
+  roleNames: string[];
+}
+
+// 交易代码数据类型
+export interface TransactionCode {
+  id: string;
+  code: string;
+  description: string;
+  status: string;
 }
 
 // 访问权限数据类型
@@ -221,7 +282,8 @@ export const mockCustomers: Customer[] = Array.from({ length: 15 }, (_, i) => ({
   street: [`Orchard Road`, `Marina Bay`, `Raffles Place`, `Bugis Street`, `Clementi Ave`][i % 5],
   building: [`Tower ${i + 1}`, `Plaza ${i + 1}`, `Centre ${i + 1}`][i % 3],
   postalCode: `${String(100000 + i * 1111).slice(0, 6)}`,
-  country: [`Singapore`, `Malaysia`, `China`, `Japan`, `Australia`][i % 5]
+  country: [`Singapore`, `Malaysia`, `China`, `Japan`, `Australia`][i % 5],
+  status: i % 4 === 0 ? 'inactive' : 'active' as const
 }));
 
 // 模拟供应商数据
@@ -344,9 +406,19 @@ export const mockCompanies: Company[] = Array.from({ length: 5 }, (_, i) => ({
   id: generateId(),
   code: `COM${String(i + 1).padStart(3, '0')}`,
   name: `公司 ${i + 1}`,
-  address: `北京市海淀区某某街道${i + 1}号`,
+  registeredNo: `REG${String(20230001 + i)}`,
+  registeredDate: new Date(Date.now() - Math.random() * 730 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  contactPerson: [`张三`, `李四`, `王五`, `赵六`, `陈七`][i],
   phone: `010-8888${String(i).padStart(4, '0')}`,
+  fax: `010-9999${String(i).padStart(4, '0')}`,
+  website: `https://company${i + 1}.example.com`,
   email: `company${i + 1}@example.com`,
+  block: `${100 + i}`,
+  unitNo: `#${String(Math.floor(i / 3) + 1).padStart(2, '0')}-${String(i * 7 + 1).padStart(2, '0')}`,
+  street: [`Orchard Road`, `Marina Bay`, `Raffles Place`, `Bugis Street`, `Clementi Ave`][i % 5],
+  building: [`Tower ${i + 1}`, `Plaza ${i + 1}`, `Centre ${i + 1}`][i % 3],
+  postalCode: `${String(100000 + i * 1111).slice(0, 6)}`,
+  country: [`Singapore`, `Malaysia`, `China`, `Japan`, `Australia`][i % 5],
   createdAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   status: i % 4 === 0 ? 'inactive' : 'active'
 }));
@@ -363,6 +435,63 @@ export const mockProjects: Project[] = Array.from({ length: 5 }, (_, i) => ({
   status: (['active', 'inactive', 'completed'] as const)[i % 3],
   description: `这是项目 ${i + 1} 的描述信息`
 }));
+
+// 模拟菜单数据
+export const mockMenuItems: MenuItem[] = [
+  { id: 'menu001', name: 'Dashboard', status: 'active' },
+  { id: 'menu002', name: 'Company', status: 'active' },
+  { id: 'menu003', name: 'Project', status: 'active' },
+  { id: 'menu004', name: 'Role', status: 'active' },
+  { id: 'menu005', name: 'User', status: 'active' },
+  { id: 'menu006', name: 'Customers', status: 'active' },
+  { id: 'menu007', name: 'Suppliers', status: 'active' },
+  { id: 'menu008', name: 'Invoices', status: 'active' },
+  { id: 'menu009', name: 'Receipts', status: 'active' },
+  { id: 'menu010', name: 'Reports', status: 'active' },
+];
+
+// 模拟模块数据
+export const mockModuleItems: ModuleItem[] = [
+  { id: 'mod001', name: 'Administrator', status: 'active' },
+  { id: 'mod002', name: 'Finance', status: 'active' },
+  { id: 'mod003', name: 'Human Resources', status: 'active' },
+  { id: 'mod004', name: 'Personalization', status: 'active' },
+  { id: 'mod005', name: 'System Logs', status: 'inactive' },
+];
+
+// 模拟菜单权限数据
+export const mockMenuAccess: MenuAccess[] = [
+  { id: 'ma001', menuId: 'menu001', menuName: 'Dashboard', roleIds: ['role001', 'role002', 'role003', 'role004'], roleNames: ['系统管理员', '项目经理', '普通用户', '财务人员'] },
+  { id: 'ma002', menuId: 'menu002', menuName: 'Company', roleIds: ['role001', 'role002'], roleNames: ['系统管理员', '项目经理'] },
+  { id: 'ma003', menuId: 'menu003', menuName: 'Project', roleIds: ['role001', 'role002', 'role003'], roleNames: ['系统管理员', '项目经理', '普通用户'] },
+  { id: 'ma004', menuId: 'menu008', menuName: 'Invoices', roleIds: ['role001', 'role004'], roleNames: ['系统管理员', '财务人员'] },
+  { id: 'ma005', menuId: 'menu009', menuName: 'Receipts', roleIds: ['role001', 'role004'], roleNames: ['系统管理员', '财务人员'] },
+];
+
+// 模拟交易代码数据
+export const mockTransactionCodes: TransactionCode[] = [
+  { id: 'tc001', code: 'TXN-001', description: 'Sales Invoice', status: 'active' },
+  { id: 'tc002', code: 'TXN-002', description: 'Purchase Order', status: 'active' },
+  { id: 'tc003', code: 'TXN-003', description: 'Credit Note', status: 'active' },
+  { id: 'tc004', code: 'TXN-004', description: 'Debit Note', status: 'active' },
+  { id: 'tc005', code: 'TXN-005', description: 'Payment Voucher', status: 'inactive' },
+];
+
+// 模拟费用类型数据
+export const mockChargeTypes: ChargeType[] = [
+  { id: 'ct001', name: 'Service Charge', status: 'active' },
+  { id: 'ct002', name: 'Material Cost', status: 'active' },
+  { id: 'ct003', name: 'Labour Cost', status: 'active' },
+  { id: 'ct004', name: 'Transport Fee', status: 'inactive' },
+];
+
+// 模拟费用代码数据
+export const mockChargeCodes: ChargeCode[] = [
+  { id: 'cc001', code: 'SVC-001', description: 'General Service', chargeTypeId: 'ct001', chargeTypeName: 'Service Charge', status: 'active' },
+  { id: 'cc002', code: 'MAT-001', description: 'Raw Materials', chargeTypeId: 'ct002', chargeTypeName: 'Material Cost', status: 'active' },
+  { id: 'cc003', code: 'LAB-001', description: 'Skilled Labour', chargeTypeId: 'ct003', chargeTypeName: 'Labour Cost', status: 'active' },
+  { id: 'cc004', code: 'SVC-002', description: 'Consulting Service', chargeTypeId: 'ct001', chargeTypeName: 'Service Charge', status: 'active' },
+];
 
 // 模拟用户角色数据
 export const mockUserRoles: UserRole[] = [

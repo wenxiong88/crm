@@ -10,6 +10,12 @@ import {
   mockUsers,
   mockUserRoles,
   mockAccessRights,
+  mockChargeTypes,
+  mockChargeCodes,
+  mockMenuItems,
+  mockModuleItems,
+  mockMenuAccess,
+  mockTransactionCodes,
   mockPayrolls,
   mockDiscoverPosts,
   Employee,
@@ -24,6 +30,12 @@ import {
   User,
   UserRole,
   AccessRight,
+  ChargeType,
+  ChargeCode,
+  MenuItem,
+  ModuleItem,
+  MenuAccess,
+  TransactionCode,
   Payroll,
   DiscoverPost,
   DiscoverComment
@@ -87,6 +99,43 @@ export const employeeAPI = {
 // 顾客API
 export const customerAPI = {
   getCustomers: async (): Promise<Customer[]> => {
+    if (!isDemoMode()) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/Master/GetCustomerList`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pFilter: '' }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        console.log('[CustomerAPI] GetCustomerList response:', json);
+        const items = json.response_details || [];
+        return items.map((item: any) => ({
+          id: String(item.customerID ?? ''),
+          name: item.custName ?? '',
+          contactPerson: item.custContactPer ?? '',
+          email: item.custEmail ?? '',
+          phone: item.custHP ?? '',
+          block: item.custBlock ?? '',
+          unitNo: item.custUnitNo ?? '',
+          street: item.custStreet ?? '',
+          building: item.custBuilding ?? '',
+          postalCode: item.custPostal ?? '',
+          country: (() => {
+            const raw = String(item.countryName ?? '').trim();
+            const parts = raw.split(/[\s\-–]+/);
+            // If first token is a 2-3 letter uppercase code (e.g. "SG"), drop it
+            if (parts.length > 1 && /^[A-Z]{2,3}$/.test(parts[0])) return parts.slice(1).join(' ');
+            return raw;
+          })(),
+          countryId: Number(item.custCountryID) || 0,
+          status: item.isActive ? 'active' : 'inactive' as const,
+        }));
+      } catch (err) {
+        console.warn('[CustomerAPI] GetCustomerList failed, falling back to mock data:', err);
+      }
+    }
+    // Demo mode or API fallback
     await delay();
     return [...mockCustomers];
   },
@@ -95,6 +144,36 @@ export const customerAPI = {
     return mockCustomers.find(cus => cus.id === id);
   },
   createCustomer: async (customer: Omit<Customer, 'id'>): Promise<Customer> => {
+    if (!isDemoMode()) {
+      const payload: any = {
+        customerID: 0,
+        custName: customer.name ?? '',
+        custContactPer: customer.contactPerson ?? '',
+        custEmail: customer.email ?? '',
+        custHP: customer.phone ?? '',
+        custBlock: customer.block ?? '',
+        custUnitNo: customer.unitNo ?? '',
+        custStreet: customer.street ?? '',
+        custBuilding: customer.building ?? '',
+        custPostal: customer.postalCode ?? '',
+        custCountryID: Number(customer.countryId) || 0,
+        country: customer.country ?? '',
+        isActive: customer.status === 'active',
+      };
+      const res = await fetch(`${API_BASE_URL}/Master/SaveCustomer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      console.log('[CustomerAPI] SaveCustomer response:', json);
+      if (json.response_code !== undefined && json.response_code !== 0 && json.response_code !== 200) {
+        throw new Error(json.response_message || 'Save failed');
+      }
+      const newId = json.response_details?.customerID ?? json.customerID ?? Math.random().toString(36).substr(2, 9);
+      return { ...customer, id: String(newId) };
+    }
     await delay();
     const newCustomer = {
       ...customer,
@@ -104,6 +183,35 @@ export const customerAPI = {
     return newCustomer;
   },
   updateCustomer: async (id: string, customer: Partial<Customer>): Promise<Customer | undefined> => {
+    if (!isDemoMode()) {
+      const payload: any = {
+        customerID: Number(id) || 0,
+        custName: customer.name ?? '',
+        custContactPer: customer.contactPerson ?? '',
+        custEmail: customer.email ?? '',
+        custHP: customer.phone ?? '',
+        custBlock: customer.block ?? '',
+        custUnitNo: customer.unitNo ?? '',
+        custStreet: customer.street ?? '',
+        custBuilding: customer.building ?? '',
+        custPostal: customer.postalCode ?? '',
+        custCountryID: Number(customer.countryId) || 0,
+        country: customer.country ?? '',
+        isActive: customer.status === 'active',
+      };
+      const res = await fetch(`${API_BASE_URL}/Master/UpdateCustomer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      console.log('[CustomerAPI] UpdateCustomer response:', json);
+      if (json.response_code !== undefined && json.response_code !== 0 && json.response_code !== 200) {
+        throw new Error(json.response_message || 'Update failed');
+      }
+      return { id, ...customer } as Customer;
+    }
     await delay();
     const index = mockCustomers.findIndex(cus => cus.id === id);
     if (index !== -1) {
@@ -113,6 +221,20 @@ export const customerAPI = {
     return undefined;
   },
   deleteCustomer: async (id: string): Promise<boolean> => {
+    if (!isDemoMode()) {
+      const res = await fetch(`${API_BASE_URL}/Master/RemoveCustomer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerID: Number(id) || 0 }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      console.log('[CustomerAPI] RemoveCustomer response:', json);
+      if (json.response_code !== undefined && json.response_code !== 0 && json.response_code !== 200) {
+        throw new Error(json.response_message || 'Delete failed');
+      }
+      return true;
+    }
     await delay();
     const index = mockCustomers.findIndex(cus => cus.id === id);
     if (index !== -1) {
@@ -286,6 +408,42 @@ export const feedbackAPI = {
 // 公司API
 export const companyAPI = {
   getCompanies: async (): Promise<Company[]> => {
+    if (!isDemoMode()) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/Master/GetCompanyList`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pFilter: '' }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        console.log('[CompanyAPI] GetCompanyList response:', json);
+        const items = json.response_details || [];
+        return items.map((item: any) => ({
+          id: String(item.companyID ?? ''),
+          code: item.companyCode ?? '',
+          name: item.companyName ?? '',
+          registeredNo: item.companyRegNo ?? '',
+          registeredDate: (item.companyRegDate ?? '').split('T')[0],
+          contactPerson: item.companyContactPer ?? '',
+          phone: item.companyHP ?? '',
+          fax: item.companyFax ?? '',
+          website: item.companyWebsite ?? '',
+          email: item.companyEmail ?? '',
+          block: item.companyBlock ?? '',
+          unitNo: item.companyUnitNo ?? '',
+          street: item.companyStreet ?? '',
+          building: item.companyBuilding ?? '',
+          postalCode: item.companyPostal ?? '',
+          country: String(item.countryName ?? '').trim(),
+          countryId: Number(item.companyCountryID) || 0,
+          createdAt: (item.createdDate ?? '').split('T')[0],
+          status: item.isActive ? 'active' : 'inactive' as const,
+        }));
+      } catch (err) {
+        console.warn('[CompanyAPI] GetCompanyList failed, falling back to mock data:', err);
+      }
+    }
     await delay();
     return [...mockCompanies];
   },
@@ -294,6 +452,40 @@ export const companyAPI = {
     return mockCompanies.find(comp => comp.id === id);
   },
   createCompany: async (company: Omit<Company, 'id'>): Promise<Company> => {
+    if (!isDemoMode()) {
+      const payload: any = {
+        companyID: 0,
+        companyCode: company.code ?? '',
+        companyName: company.name ?? '',
+        companyRegNo: company.registeredNo ?? '',
+        companyRegDate: company.registeredDate || null,
+        companyContactPer: company.contactPerson ?? '',
+        companyHP: company.phone ?? '',
+        companyFax: company.fax ?? '',
+        companyWebsite: company.website ?? '',
+        companyEmail: company.email ?? '',
+        companyBlock: company.block ?? '',
+        companyUnitNo: company.unitNo ?? '',
+        companyStreet: company.street ?? '',
+        companyBuilding: company.building ?? '',
+        companyPostal: company.postalCode ?? '',
+        companyCountryID: Number((company as any).countryId) || 0,
+        isActive: company.status === 'active',
+      };
+      const res = await fetch(`${API_BASE_URL}/Master/SaveCompany`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      console.log('[CompanyAPI] SaveCompany response:', json);
+      if (json.response_code !== undefined && json.response_code !== 0 && json.response_code !== 200) {
+        throw new Error(json.response_message || 'Save failed');
+      }
+      const newId = json.response_details?.companyID ?? json.companyID ?? Math.random().toString(36).substr(2, 9);
+      return { ...company, id: String(newId) };
+    }
     await delay();
     const newCompany = {
       ...company,
@@ -303,6 +495,39 @@ export const companyAPI = {
     return newCompany;
   },
   updateCompany: async (id: string, company: Partial<Company>): Promise<Company | undefined> => {
+    if (!isDemoMode()) {
+      const payload: any = {
+        companyID: Number(id) || 0,
+        companyCode: company.code ?? '',
+        companyName: company.name ?? '',
+        companyRegNo: company.registeredNo ?? '',
+        companyRegDate: company.registeredDate || null,
+        companyContactPer: company.contactPerson ?? '',
+        companyHP: company.phone ?? '',
+        companyFax: company.fax ?? '',
+        companyWebsite: company.website ?? '',
+        companyEmail: company.email ?? '',
+        companyBlock: company.block ?? '',
+        companyUnitNo: company.unitNo ?? '',
+        companyStreet: company.street ?? '',
+        companyBuilding: company.building ?? '',
+        companyPostal: company.postalCode ?? '',
+        companyCountryID: Number((company as any).countryId) || 0,
+        isActive: company.status === 'active',
+      };
+      const res = await fetch(`${API_BASE_URL}/Master/UpdateCompany`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      console.log('[CompanyAPI] UpdateCompany response:', json);
+      if (json.response_code !== undefined && json.response_code !== 0 && json.response_code !== 200) {
+        throw new Error(json.response_message || 'Update failed');
+      }
+      return { id, ...company } as Company;
+    }
     await delay();
     const index = mockCompanies.findIndex(comp => comp.id === id);
     if (index !== -1) {
@@ -312,6 +537,20 @@ export const companyAPI = {
     return undefined;
   },
   deleteCompany: async (id: string): Promise<boolean> => {
+    if (!isDemoMode()) {
+      const res = await fetch(`${API_BASE_URL}/Master/RemoveCompany`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyID: Number(id) || 0 }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      console.log('[CompanyAPI] RemoveCompany response:', json);
+      if (json.response_code !== undefined && json.response_code !== 0 && json.response_code !== 200) {
+        throw new Error(json.response_message || 'Delete failed');
+      }
+      return true;
+    }
     await delay();
     const index = mockCompanies.findIndex(comp => comp.id === id);
     if (index !== -1) {
@@ -322,9 +561,73 @@ export const companyAPI = {
   }
 };
 
+// 国家API
+export interface CountryOption {
+  id: number;
+  name: string;
+}
+
+export const countryAPI = {
+  getCountries: async (): Promise<CountryOption[]> => {
+    if (!isDemoMode()) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/Master/GetCountryList`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pFilter: '' }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        console.log('[CountryAPI] GetCountryList response:', json);
+        const items = json.response_details || [];
+        return items.map((item: any) => ({
+          id: Number(item.countryID) || 0,
+          name: String(item.countryName ?? '').trim(),
+        }));
+      } catch (err) {
+        console.warn('[CountryAPI] GetCountryList failed, falling back to defaults:', err);
+      }
+    }
+    // Fallback defaults
+    return [
+      { id: 1, name: 'Singapore' },
+      { id: 2, name: 'Malaysia' },
+      { id: 3, name: 'China' },
+      { id: 4, name: 'Japan' },
+      { id: 5, name: 'Australia' },
+    ];
+  },
+};
+
 // 项目API
 export const projectAPI = {
   getProjects: async (): Promise<Project[]> => {
+    if (!isDemoMode()) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/Master/GetProjectList`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pFilter: '' }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        console.log('[ProjectAPI] GetProjectList response:', json);
+        const items = json.response_details || [];
+        return items.map((item: any) => ({
+          id: String(item.projectID ?? ''),
+          code: item.projectCode ?? '',
+          name: item.projectName ?? '',
+          companyId: String(item.companyID ?? ''),
+          companyName: item.companyName ?? '',
+          startDate: (item.startDate ?? '').split('T')[0],
+          endDate: (item.endDate ?? '').split('T')[0],
+          status: item.isCompleted ? 'completed' : item.isActive ? 'active' : 'inactive' as const,
+          description: item.description ?? '',
+        }));
+      } catch (err) {
+        console.warn('[ProjectAPI] GetProjectList failed, falling back to mock data:', err);
+      }
+    }
     await delay();
     return [...mockProjects];
   },
@@ -333,6 +636,32 @@ export const projectAPI = {
     return mockProjects.find(proj => proj.id === id);
   },
   createProject: async (project: Omit<Project, 'id'>): Promise<Project> => {
+    if (!isDemoMode()) {
+      const payload: any = {
+        projectID: 0,
+        projectCode: project.code ?? '',
+        projectName: project.name ?? '',
+        companyID: Number(project.companyId) || 0,
+        startDate: project.startDate || null,
+        endDate: project.endDate || null,
+        description: project.description ?? '',
+        isActive: project.status === 'active' || project.status === 'completed',
+        isCompleted: project.status === 'completed',
+      };
+      const res = await fetch(`${API_BASE_URL}/Master/SaveProject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      console.log('[ProjectAPI] SaveProject response:', json);
+      if (json.response_code !== undefined && json.response_code !== 0 && json.response_code !== 200) {
+        throw new Error(json.response_message || 'Save failed');
+      }
+      const newId = json.response_details?.projectID ?? json.projectID ?? Math.random().toString(36).substr(2, 9);
+      return { ...project, id: String(newId) };
+    }
     await delay();
     const newProject = {
       ...project,
@@ -342,6 +671,31 @@ export const projectAPI = {
     return newProject;
   },
   updateProject: async (id: string, project: Partial<Project>): Promise<Project | undefined> => {
+    if (!isDemoMode()) {
+      const payload: any = {
+        projectID: Number(id) || 0,
+        projectCode: project.code ?? '',
+        projectName: project.name ?? '',
+        companyID: Number(project.companyId) || 0,
+        startDate: project.startDate || null,
+        endDate: project.endDate || null,
+        description: project.description ?? '',
+        isActive: project.status === 'active' || project.status === 'completed',
+        isCompleted: project.status === 'completed',
+      };
+      const res = await fetch(`${API_BASE_URL}/Master/UpdateProject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      console.log('[ProjectAPI] UpdateProject response:', json);
+      if (json.response_code !== undefined && json.response_code !== 0 && json.response_code !== 200) {
+        throw new Error(json.response_message || 'Update failed');
+      }
+      return { id, ...project } as Project;
+    }
     await delay();
     const index = mockProjects.findIndex(proj => proj.id === id);
     if (index !== -1) {
@@ -351,6 +705,20 @@ export const projectAPI = {
     return undefined;
   },
   deleteProject: async (id: string): Promise<boolean> => {
+    if (!isDemoMode()) {
+      const res = await fetch(`${API_BASE_URL}/Master/RemoveProject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectID: Number(id) || 0 }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      console.log('[ProjectAPI] RemoveProject response:', json);
+      if (json.response_code !== undefined && json.response_code !== 0 && json.response_code !== 200) {
+        throw new Error(json.response_message || 'Delete failed');
+      }
+      return true;
+    }
     await delay();
     const index = mockProjects.findIndex(proj => proj.id === id);
     if (index !== -1) {
@@ -507,6 +875,90 @@ export const userAPI = {
       throw new Error(json.response_message || 'Delete failed');
     }
     return true;
+  }
+};
+
+// 菜单API
+export const menuAPI = {
+  getMenuItems: async (): Promise<MenuItem[]> => { await delay(); return [...mockMenuItems]; },
+  createMenuItem: async (item: Omit<MenuItem, 'id'>): Promise<MenuItem> => { await delay(); const n = { ...item, id: Math.random().toString(36).substr(2, 9) }; mockMenuItems.push(n); return n; },
+  updateMenuItem: async (id: string, item: Partial<MenuItem>): Promise<MenuItem | undefined> => { await delay(); const i = mockMenuItems.findIndex(r => r.id === id); if (i !== -1) { mockMenuItems[i] = { ...mockMenuItems[i], ...item }; return mockMenuItems[i]; } return undefined; },
+  deleteMenuItem: async (id: string): Promise<boolean> => { await delay(); const i = mockMenuItems.findIndex(r => r.id === id); if (i !== -1) { mockMenuItems.splice(i, 1); return true; } return false; },
+};
+
+// 模块API
+export const moduleAPI = {
+  getModuleItems: async (): Promise<ModuleItem[]> => { await delay(); return [...mockModuleItems]; },
+  createModuleItem: async (item: Omit<ModuleItem, 'id'>): Promise<ModuleItem> => { await delay(); const n = { ...item, id: Math.random().toString(36).substr(2, 9) }; mockModuleItems.push(n); return n; },
+  updateModuleItem: async (id: string, item: Partial<ModuleItem>): Promise<ModuleItem | undefined> => { await delay(); const i = mockModuleItems.findIndex(r => r.id === id); if (i !== -1) { mockModuleItems[i] = { ...mockModuleItems[i], ...item }; return mockModuleItems[i]; } return undefined; },
+  deleteModuleItem: async (id: string): Promise<boolean> => { await delay(); const i = mockModuleItems.findIndex(r => r.id === id); if (i !== -1) { mockModuleItems.splice(i, 1); return true; } return false; },
+};
+
+// 菜单权限API
+export const menuAccessAPI = {
+  getMenuAccess: async (): Promise<MenuAccess[]> => { await delay(); return [...mockMenuAccess]; },
+  createMenuAccess: async (item: Omit<MenuAccess, 'id'>): Promise<MenuAccess> => { await delay(); const n = { ...item, id: Math.random().toString(36).substr(2, 9) }; mockMenuAccess.push(n); return n; },
+  updateMenuAccess: async (id: string, item: Partial<MenuAccess>): Promise<MenuAccess | undefined> => { await delay(); const i = mockMenuAccess.findIndex(r => r.id === id); if (i !== -1) { mockMenuAccess[i] = { ...mockMenuAccess[i], ...item }; return mockMenuAccess[i]; } return undefined; },
+  deleteMenuAccess: async (id: string): Promise<boolean> => { await delay(); const i = mockMenuAccess.findIndex(r => r.id === id); if (i !== -1) { mockMenuAccess.splice(i, 1); return true; } return false; },
+};
+
+// 交易代码API
+export const transactionCodeAPI = {
+  getTransactionCodes: async (): Promise<TransactionCode[]> => { await delay(); return [...mockTransactionCodes]; },
+  createTransactionCode: async (item: Omit<TransactionCode, 'id'>): Promise<TransactionCode> => { await delay(); const n = { ...item, id: Math.random().toString(36).substr(2, 9) }; mockTransactionCodes.push(n); return n; },
+  updateTransactionCode: async (id: string, item: Partial<TransactionCode>): Promise<TransactionCode | undefined> => { await delay(); const i = mockTransactionCodes.findIndex(r => r.id === id); if (i !== -1) { mockTransactionCodes[i] = { ...mockTransactionCodes[i], ...item }; return mockTransactionCodes[i]; } return undefined; },
+  deleteTransactionCode: async (id: string): Promise<boolean> => { await delay(); const i = mockTransactionCodes.findIndex(r => r.id === id); if (i !== -1) { mockTransactionCodes.splice(i, 1); return true; } return false; },
+};
+
+// 费用类型API
+export const chargeTypeAPI = {
+  getChargeTypes: async (): Promise<ChargeType[]> => {
+    await delay();
+    return [...mockChargeTypes];
+  },
+  createChargeType: async (ct: Omit<ChargeType, 'id'>): Promise<ChargeType> => {
+    await delay();
+    const newItem = { ...ct, id: Math.random().toString(36).substr(2, 9) };
+    mockChargeTypes.push(newItem);
+    return newItem;
+  },
+  updateChargeType: async (id: string, ct: Partial<ChargeType>): Promise<ChargeType | undefined> => {
+    await delay();
+    const index = mockChargeTypes.findIndex(r => r.id === id);
+    if (index !== -1) { mockChargeTypes[index] = { ...mockChargeTypes[index], ...ct }; return mockChargeTypes[index]; }
+    return undefined;
+  },
+  deleteChargeType: async (id: string): Promise<boolean> => {
+    await delay();
+    const index = mockChargeTypes.findIndex(r => r.id === id);
+    if (index !== -1) { mockChargeTypes.splice(index, 1); return true; }
+    return false;
+  }
+};
+
+// 费用代码API
+export const chargeCodeAPI = {
+  getChargeCodes: async (): Promise<ChargeCode[]> => {
+    await delay();
+    return [...mockChargeCodes];
+  },
+  createChargeCode: async (cc: Omit<ChargeCode, 'id'>): Promise<ChargeCode> => {
+    await delay();
+    const newItem = { ...cc, id: Math.random().toString(36).substr(2, 9) };
+    mockChargeCodes.push(newItem);
+    return newItem;
+  },
+  updateChargeCode: async (id: string, cc: Partial<ChargeCode>): Promise<ChargeCode | undefined> => {
+    await delay();
+    const index = mockChargeCodes.findIndex(r => r.id === id);
+    if (index !== -1) { mockChargeCodes[index] = { ...mockChargeCodes[index], ...cc }; return mockChargeCodes[index]; }
+    return undefined;
+  },
+  deleteChargeCode: async (id: string): Promise<boolean> => {
+    await delay();
+    const index = mockChargeCodes.findIndex(r => r.id === id);
+    if (index !== -1) { mockChargeCodes.splice(index, 1); return true; }
+    return false;
   }
 };
 

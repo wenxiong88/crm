@@ -28,9 +28,26 @@ export default function Invoices() {
   const [priceInput, setPriceInput] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const printRef = useRef<HTMLDivElement>(null);
+  const [statusDdlOpen, setStatusDdlOpen] = useState(false);
+  const [filterDdlOpen, setFilterDdlOpen] = useState(false);
+  const statusDdlRef = useRef<HTMLDivElement>(null);
+  const filterDdlRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (statusDdlRef.current && !statusDdlRef.current.contains(e.target as Node)) {
+        setStatusDdlOpen(false);
+      }
+      if (filterDdlRef.current && !filterDdlRef.current.contains(e.target as Node)) {
+        setFilterDdlOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   const fetchData = async () => {
@@ -299,16 +316,62 @@ export default function Invoices() {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             {t('status')}
           </label>
-          <select
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-900/50 text-sm text-gray-900 dark:text-white input-themed"
-            value={currentInvoice.status || 'draft'}
-            onChange={(e) => setCurrentInvoice({ ...currentInvoice, status: e.target.value as Invoice['status'] })}
-          >
-            <option value="draft">{t('draft')}</option>
-            <option value="sent">{t('sent')}</option>
-            <option value="paid">{t('paid')}</option>
-            <option value="overdue">{t('overdue')}</option>
-          </select>
+          <div ref={statusDdlRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setStatusDdlOpen(!statusDdlOpen)}
+              className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 text-sm border rounded-xl transition-all cursor-pointer ${
+                statusDdlOpen
+                  ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30'
+                  : 'border-gray-200 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600'
+              } bg-white dark:bg-gray-900/50`}
+            >
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getStatusBadge(currentInvoice.status || 'draft').dot }}></span>
+                <span className="text-gray-900 dark:text-white">{getStatusText(currentInvoice.status || 'draft')}</span>
+              </span>
+              <i className={`fa-solid fa-chevron-down text-[10px] text-gray-400 transition-transform duration-200 ${statusDdlOpen ? 'rotate-180' : ''}`}></i>
+            </button>
+            <AnimatePresence>
+              {statusDdlOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute z-50 top-full mt-1.5 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700/50 rounded-xl shadow-xl shadow-black/10 dark:shadow-black/30 overflow-hidden"
+                >
+                  <div className="py-1">
+                    {(['draft', 'sent', 'paid', 'overdue'] as const).map((status) => {
+                      const badge = getStatusBadge(status);
+                      const isSelected = (currentInvoice.status || 'draft') === status;
+                      return (
+                        <button
+                          key={status}
+                          type="button"
+                          onClick={() => {
+                            setCurrentInvoice({ ...currentInvoice, status });
+                            setStatusDdlOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
+                            isSelected
+                              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/40'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: badge.dot }}></span>
+                            <span>{getStatusText(status)}</span>
+                          </span>
+                          {isSelected && <i className="fa-solid fa-check text-[10px] text-blue-500"></i>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
@@ -439,17 +502,66 @@ export default function Invoices() {
               <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
             </div>
 
-            <select
-              className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-900/50 text-sm text-gray-900 dark:text-white input-themed"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">{t('allStatus')}</option>
-              <option value="draft">{t('draft')}</option>
-              <option value="sent">{t('sent')}</option>
-              <option value="paid">{t('paid')}</option>
-              <option value="overdue">{t('overdue')}</option>
-            </select>
+            <div ref={filterDdlRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setFilterDdlOpen(!filterDdlOpen)}
+                className={`flex items-center justify-between gap-2 px-4 py-2 text-sm border rounded-xl transition-all cursor-pointer min-w-[140px] ${
+                  filterDdlOpen
+                    ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30'
+                    : 'border-gray-200 dark:border-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600'
+                } bg-white dark:bg-gray-900/50`}
+              >
+                <span className="flex items-center gap-2">
+                  {statusFilter !== 'all' && (
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getStatusBadge(statusFilter).dot }}></span>
+                  )}
+                  <span className="text-gray-900 dark:text-white">
+                    {statusFilter === 'all' ? t('allStatus') : getStatusText(statusFilter)}
+                  </span>
+                </span>
+                <i className={`fa-solid fa-chevron-down text-[10px] text-gray-400 transition-transform duration-200 ${filterDdlOpen ? 'rotate-180' : ''}`}></i>
+              </button>
+              <AnimatePresence>
+                {filterDdlOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute z-50 top-full mt-1.5 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700/50 rounded-xl shadow-xl shadow-black/10 dark:shadow-black/30 overflow-hidden"
+                  >
+                    <div className="py-1">
+                      {(['all', 'draft', 'sent', 'paid', 'overdue'] as const).map((status) => {
+                        const isSelected = statusFilter === status;
+                        const badge = status !== 'all' ? getStatusBadge(status) : null;
+                        return (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => {
+                              setStatusFilter(status);
+                              setFilterDdlOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
+                              isSelected
+                                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/40'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2.5">
+                              {badge && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: badge.dot }}></span>}
+                              <span>{status === 'all' ? t('allStatus') : getStatusText(status)}</span>
+                            </span>
+                            {isSelected && <i className="fa-solid fa-check text-[10px] text-blue-500"></i>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             <div className="flex items-center rounded-xl border border-gray-200 dark:border-gray-700/50 overflow-hidden">
               <button

@@ -17,9 +17,16 @@ import Feedback from "@/pages/Feedback";
 import Settings from "@/pages/Settings";
 import Company from "@/pages/Company";
 import Project from "@/pages/Project";
+import Role from "@/pages/Role";
 import User from "@/pages/User";
 import UserRole from "@/pages/UserRole";
 import AccessRight from "@/pages/AccessRight";
+import ChargeTypePage from "@/pages/ChargeType";
+import ChargeCodePage from "@/pages/ChargeCode";
+import MenuPage from "@/pages/Menu";
+import ModulePage from "@/pages/Module";
+import MenuAccessPage from "@/pages/MenuAccess";
+import TransactionCodePage from "@/pages/TransactionCode";
 import Payroll from "@/pages/Payroll";
 import StickyNotes from "@/pages/StickyNotes";
 import QuickAccess from "@/pages/QuickAccess";
@@ -71,9 +78,16 @@ export default function App() {
               <Route path="administrator/customers" element={<Customers />} />
               <Route path="administrator/company" element={<Company />} />
               <Route path="administrator/project" element={<Project />} />
+              <Route path="administrator/role" element={<Role />} />
               <Route path="administrator/user" element={<User />} />
               <Route path="administrator/user-role" element={<UserRole />} />
               <Route path="administrator/suppliers" element={<Suppliers />} />
+              <Route path="administrator/menu" element={<MenuPage />} />
+              <Route path="administrator/module" element={<ModulePage />} />
+              <Route path="administrator/menu-access" element={<MenuAccessPage />} />
+              <Route path="administrator/charge-type" element={<ChargeTypePage />} />
+              <Route path="administrator/charge-code" element={<ChargeCodePage />} />
+              <Route path="administrator/transaction-code" element={<TransactionCodePage />} />
               <Route path="administrator/access-right" element={<AccessRight />} />
               <Route path="personalization/sticky-notes" element={<StickyNotes />} />
               <Route path="personalization/quick-access" element={<QuickAccess />} />
