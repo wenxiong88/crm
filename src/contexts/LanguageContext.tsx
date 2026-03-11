@@ -513,7 +513,11 @@ const translations = {
     commentsCount: '条评论',
     doubleTapLike: '双击点赞',
     onlineNow: '在线',
-    viewStory: '查看故事'
+    viewStory: '查看故事',
+
+    // 原型构建器
+    prototype: '原型',
+    managePrototype: '可视化配置模块，自动生成可运行原型',
   },
   en: {
     // Navigation menu
@@ -1015,7 +1019,11 @@ const translations = {
     commentsCount: 'comments',
     doubleTapLike: 'Double tap to like',
     onlineNow: 'Online',
-    viewStory: 'View Story'
+    viewStory: 'View Story',
+
+    // Prototype Builder
+    prototype: 'Prototype',
+    managePrototype: 'Visually configure modules, auto-generate runnable prototypes',
   }
 };
 

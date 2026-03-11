@@ -176,7 +176,7 @@ export default function Role() {
     setIsLoading(true);
     try {
       const data = await userRoleAPI.getUserRoles();
-      setRoles(data.map(r => ({ id: r.id, code: r.code, name: r.name, status: 'active' })));
+      setRoles(data.map(r => ({ id: r.id, code: r.code, name: r.name, status: (r as any).status || 'active' })));
     } catch (error) {
       toast.error(t('fetchError') || '获取数据失败');
     } finally {
@@ -189,13 +189,15 @@ export default function Role() {
     const delName = deleteTarget.name;
     try {
       await userRoleAPI.deleteUserRole(deleteTarget.id);
-      setRoles(prev => prev.filter(r => r.id !== deleteTarget.id));
+      const refreshed = await userRoleAPI.getUserRoles();
+      setRoles(refreshed.map(r => ({ id: r.id, code: r.code, name: r.name, status: (r as any).status || 'active' })));
       showToast(
         language === 'zh' ? '删除成功' : 'Deleted Successfully',
         language === 'zh' ? `${delName} 已被删除` : `${delName} has been deleted`,
         'delete'
       );
     } catch (error) {
+      console.error('[Role] Delete failed:', error);
       toast.error(t('deleteError') || '删除失败');
     } finally {
       setDeleteTarget(null);
@@ -240,14 +242,16 @@ export default function Role() {
   const handleAdd = async (role: Partial<RoleItem>) => {
     const roleName = role.name || '';
     try {
-      const newRole = await userRoleAPI.createUserRole({
+      await userRoleAPI.createUserRole({
         name: role.name || '',
         code: role.code || '',
         description: '',
         permissions: [],
         createdAt: new Date().toISOString().split('T')[0],
-      });
-      setRoles(prev => [...prev, { id: newRole.id, code: newRole.code, name: newRole.name, status: role.status || 'active' }]);
+        status: role.status || 'active',
+      } as any);
+      const refreshed = await userRoleAPI.getUserRoles();
+      setRoles(refreshed.map(r => ({ id: r.id, code: r.code, name: r.name, status: (r as any).status || 'active' })));
       setIsAddModalOpen(false);
       setCurrentRole({});
       showToast(
@@ -256,6 +260,7 @@ export default function Role() {
         'add'
       );
     } catch (error) {
+      console.error('[Role] Save failed:', error);
       toast.error(t('addError') || '添加失败');
     }
   };
@@ -267,8 +272,10 @@ export default function Role() {
       await userRoleAPI.updateUserRole(currentRole.id, {
         name: role.name,
         code: role.code,
-      });
-      setRoles(prev => prev.map(r => r.id === currentRole.id ? { ...r, ...role } : r));
+        status: role.status,
+      } as any);
+      const refreshed = await userRoleAPI.getUserRoles();
+      setRoles(refreshed.map(r => ({ id: r.id, code: r.code, name: r.name, status: (r as any).status || 'active' })));
       setIsEditModalOpen(false);
       setCurrentRole({});
       showToast(
@@ -277,6 +284,7 @@ export default function Role() {
         'update'
       );
     } catch (error) {
+      console.error('[Role] Update failed:', error);
       toast.error(t('updateError') || '更新失败');
     }
   };

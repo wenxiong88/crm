@@ -161,6 +161,7 @@ export function NavigationSidebar({ isCollapsed, onToggle }: NavigationSidebarPr
         { id: 'quickAccess', labelKey: 'quickAccess', icon: 'fa-star', iconColor: '#fbbf24', path: '/personalization/quick-access' }
       ]
     },
+    { id: 'prototype', labelKey: 'prototype', icon: 'fa-flask', iconColor: '#8b5cf6', path: '/prototype' },
   ];
 
   const isActive = (path?: string) => {

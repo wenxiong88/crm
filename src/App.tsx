@@ -35,6 +35,7 @@ import LoginLog from "@/pages/LoginLog";
 import AuditLog from "@/pages/AuditLog";
 import DataLog from "@/pages/DataLog";
 import ErrorLog from "@/pages/ErrorLog";
+import Prototype from "@/pages/Prototype";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(true); // 默认已登录，用于演示
@@ -96,6 +97,7 @@ export default function App() {
               <Route path="system-logs/audit-log" element={<AuditLog />} />
               <Route path="system-logs/data-log" element={<DataLog />} />
               <Route path="system-logs/error-log" element={<ErrorLog />} />
+              <Route path="prototype" element={<Prototype />} />
               <Route path="settings" element={<Settings />} />
             </Route>
           </Routes>

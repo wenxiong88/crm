@@ -965,6 +965,30 @@ export const chargeCodeAPI = {
 // 用户角色API
 export const userRoleAPI = {
   getUserRoles: async (): Promise<UserRole[]> => {
+    if (!isDemoMode()) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/Master/GetRoleList`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pFilter: '' }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        console.log('[RoleAPI] GetRoleList response:', json);
+        const items = json.response_details || [];
+        return items.map((item: any) => ({
+          id: String(item.roleID ?? ''),
+          code: item.roleCode ?? '',
+          name: item.roleName ?? '',
+          description: item.roleDesc ?? '',
+          permissions: [],
+          createdAt: (item.createdDate ?? '').split('T')[0],
+          status: item.isActive ? 'active' : 'inactive' as const,
+        }));
+      } catch (err) {
+        console.warn('[RoleAPI] GetRoleList failed, falling back to mock data:', err);
+      }
+    }
     await delay();
     return [...mockUserRoles];
   },
@@ -973,6 +997,28 @@ export const userRoleAPI = {
     return mockUserRoles.find(role => role.id === id);
   },
   createUserRole: async (role: Omit<UserRole, 'id'>): Promise<UserRole> => {
+    if (!isDemoMode()) {
+      const payload: any = {
+        roleID: 0,
+        roleCode: role.code ?? '',
+        roleName: role.name ?? '',
+        roleDesc: role.description ?? '',
+        isActive: (role as any).status === 'active',
+      };
+      const res = await fetch(`${API_BASE_URL}/Master/SaveRole`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      console.log('[RoleAPI] SaveRole response:', json);
+      if (json.response_code !== undefined && json.response_code !== 0 && json.response_code !== 200) {
+        throw new Error(json.response_message || 'Save failed');
+      }
+      const newId = json.response_details?.roleID ?? json.roleID ?? Math.random().toString(36).substr(2, 9);
+      return { ...role, id: String(newId) };
+    }
     await delay();
     const newRole = {
       ...role,
@@ -982,6 +1028,27 @@ export const userRoleAPI = {
     return newRole;
   },
   updateUserRole: async (id: string, role: Partial<UserRole>): Promise<UserRole | undefined> => {
+    if (!isDemoMode()) {
+      const payload: any = {
+        roleID: Number(id) || 0,
+        roleCode: role.code ?? '',
+        roleName: role.name ?? '',
+        roleDesc: role.description ?? '',
+        isActive: (role as any).status === 'active',
+      };
+      const res = await fetch(`${API_BASE_URL}/Master/UpdateRole`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      console.log('[RoleAPI] UpdateRole response:', json);
+      if (json.response_code !== undefined && json.response_code !== 0 && json.response_code !== 200) {
+        throw new Error(json.response_message || 'Update failed');
+      }
+      return { id, ...role } as UserRole;
+    }
     await delay();
     const index = mockUserRoles.findIndex(r => r.id === id);
     if (index !== -1) {
@@ -991,6 +1058,20 @@ export const userRoleAPI = {
     return undefined;
   },
   deleteUserRole: async (id: string): Promise<boolean> => {
+    if (!isDemoMode()) {
+      const res = await fetch(`${API_BASE_URL}/Master/RemoveRole`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roleID: Number(id) || 0 }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      console.log('[RoleAPI] RemoveRole response:', json);
+      if (json.response_code !== undefined && json.response_code !== 0 && json.response_code !== 200) {
+        throw new Error(json.response_message || 'Delete failed');
+      }
+      return true;
+    }
     await delay();
     const index = mockUserRoles.findIndex(r => r.id === id);
     if (index !== -1) {
